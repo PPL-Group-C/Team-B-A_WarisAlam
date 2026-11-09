@@ -1,0 +1,19 @@
+.site-marker {
+    background: transparent;
+    border: 0;
+}
+
+.site-marker__pin {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: var(--pin-color);
+    border: 3px solid #fff;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+    transition: transform 0.15s ease;
+}
+
+.site-marker:hover .site-marker__pin {
+    transform: scale(1.2);
+}
