@@ -52,6 +52,7 @@ class ModerationDemoSeeder extends Seeder
             ['cetho', 4, DamageCategory::Vandalism, 3, 60 * 3, true, 10, 'Ukiran nama pengunjung pada arca di teras atas.'],
             ['prambanan', 2, DamageCategory::PhysicalDamage, 2, 60 * 72, false, 400, 'Pelapukan batu pada pagar langkan Candi Brahma.'],
             ['muarojambi', 3, DamageCategory::Waste, 3, 60 * 30, false, 60, 'Limbah oli dibuang ke kanal kuno di sisi barat kompleks.'],
+            ['borobudur', 0, DamageCategory::Vandalism, 3, 60 * 96, false, 20, 'Coretan spidol hitam pada relief Karmawibhangga sisi utara.'],
         ];
 
         $reports = [];
@@ -75,7 +76,13 @@ class ModerationDemoSeeder extends Seeder
 
         // Beberapa laporan yang sudah diproses agar statistik & rekam jejak pelapor terisi.
         $statuses->transition($reports[9], ReportStatus::Verified, $moderator, 'Pelapukan terkonfirmasi dari foto.');
-        $statuses->transition($reports[10], ReportStatus::Rejected, $moderator, 'Foto tidak menunjukkan lokasi kanal yang dimaksud.');
+        $reason = 'Foto tidak menunjukkan lokasi kanal yang dimaksud; mohon kirim ulang dengan titik GPS yang benar.';
+        $statuses->transition($reports[10], ReportStatus::Rejected, $moderator, $reason, ['rejection_reason' => $reason]);
+
+        // Contoh laporan yang sedang ditangani instansi → bisa diuji "Konfirmasi Selesai".
+        $statuses->transition($reports[11], ReportStatus::Verified, $moderator, null, ['moderator_note' => 'Coretan terverifikasi, perlu pembersihan non-destruktif.']);
+        $statuses->transition($reports[11], ReportStatus::Forwarded, null, 'Diteruskan ke BPK Wilayah X (simulasi F09).');
+        $statuses->transition($reports[11], ReportStatus::InProgress, null, 'Tim BPK menjadwalkan pembersihan (simulasi instansi).');
 
         if (! in_array(self::MODERATOR_EMAIL, config('moderation.moderator_emails'), true)) {
             $this->command?->warn('Tambahkan MODERATOR_EMAILS='.self::MODERATOR_EMAIL.' ke .env agar akun ini bisa membuka /moderasi.');

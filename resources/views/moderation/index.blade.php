@@ -99,9 +99,14 @@
 <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
     @foreach (['success' => 'bg-emerald-50 text-emerald-800 border-emerald-200', 'error' => 'bg-red-50 text-red-700 border-red-200'] as $key => $classes)
         @if (session($key))
-            <div class="mb-4 rounded-lg border px-4 py-3 text-sm {{ $classes }}" role="status">{{ session($key) }}</div>
+            <div class="mb-4 rounded-lg border px-4 py-3 text-sm {{ $classes }}" role="status" data-flash="{{ $key }}">{{ session($key) }}</div>
         @endif
     @endforeach
+    @if ($errors->any())
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+            Aksi belum disimpan: {{ $errors->first() }}
+        </div>
+    @endif
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         {{-- ===== Kolom kiri: antrean ===== --}}
@@ -139,5 +144,46 @@
             @endif
         </section>
     </div>
+
+    {{-- ===== Log tindakan kurasi ===== --}}
+    <section class="mt-8 rounded-2xl border border-forest/10 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="log-title">
+        <h2 id="log-title" class="mb-3 flex items-center gap-2 font-bold"><i data-lucide="history" class="h-5 w-5 text-forest"></i> Log Tindakan Kurasi Terkini</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[40rem] text-left text-sm">
+                <thead class="bg-mint text-[11px] uppercase tracking-wide text-[#0f2a1d]/70">
+                    <tr>
+                        <th class="px-3 py-2 font-semibold">Waktu</th>
+                        <th class="px-3 py-2 font-semibold">ID Laporan</th>
+                        <th class="px-3 py-2 font-semibold">Nama Situs</th>
+                        <th class="px-3 py-2 font-semibold">Keputusan</th>
+                        <th class="px-3 py-2 font-semibold">Petugas</th>
+                        <th class="px-3 py-2 font-semibold">Catatan</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-forest/10">
+                    @forelse ($recentActions as $action)
+                        <tr data-log-row="{{ $action->id }}">
+                            <td class="whitespace-nowrap px-3 py-2 text-xs text-[#0f2a1d]/60" title="{{ $action->created_at->translatedFormat('d M Y, H:i') }}">
+                                {{ $action->created_at->isToday() ? $action->created_at->format('H:i').' WIB' : $action->created_at->translatedFormat('d M, H:i') }}
+                            </td>
+                            <td class="px-3 py-2">
+                                <a href="{{ route('moderation.index', ['status' => 'all', 'report' => $action->report_id]) }}" class="font-semibold text-forest hover:underline">
+                                    {{ ReportPresenter::code($action->report_id) }}
+                                </a>
+                            </td>
+                            <td class="px-3 py-2">{{ $action->report?->site?->name ?? '-' }}</td>
+                            <td class="px-3 py-2">
+                                <span class="whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $action->to_status->badgeClasses() }}">{{ $action->to_status->label() }}</span>
+                            </td>
+                            <td class="px-3 py-2 text-xs">{{ $action->changedBy?->name ?? 'Sistem' }}</td>
+                            <td class="max-w-xs truncate px-3 py-2 text-xs text-[#0f2a1d]/70" title="{{ $action->note }}">{{ $action->note ?? '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-3 py-6 text-center text-sm text-[#0f2a1d]/60">Belum ada tindakan kurasi.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
 </main>
 @endsection

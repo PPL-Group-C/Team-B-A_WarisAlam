@@ -9,6 +9,20 @@ final class ReportPresenter
 {
     private const SEVERITY_LABELS = [1 => 'Ringan', 2 => 'Rendah', 3 => 'Sedang', 4 => 'Tinggi', 5 => 'Kritis'];
 
+    /** Sama dengan judul level di form laporan (DamageReportController). */
+    public const SEVERITY_TITLES = [
+        1 => 'Kerusakan Kosmetik',
+        2 => 'Kerusakan Permukaan Terbatas',
+        3 => 'Kerusakan Material Parsial',
+        4 => 'Kerusakan Struktural Luas',
+        5 => 'Ancaman Langsung',
+    ];
+
+    public static function severityShort(int $severity): string
+    {
+        return self::SEVERITY_LABELS[$severity] ?? '-';
+    }
+
     /** #REP-0089 */
     public static function code(int $id): string
     {

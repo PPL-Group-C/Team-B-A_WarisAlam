@@ -127,6 +127,26 @@
         </dl>
     </section>
 
+    {{-- ===== Hasil keputusan sebelumnya ===== --}}
+    @if ($report->rejection_reason)
+        <section class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm" data-testid="rejection-reason">
+            <h3 class="flex items-center gap-2 font-bold text-red-700"><i data-lucide="ban" class="h-4 w-4"></i> Alasan Penolakan <span class="text-xs font-normal">(terlihat oleh pelapor)</span></h3>
+            <p class="mt-1 whitespace-pre-line">{{ $report->rejection_reason }}</p>
+        </section>
+    @endif
+    @if ($report->moderator_note && $selectedStatus !== \App\Enums\ReportStatus::Pending)
+        <section class="rounded-xl border border-forest/15 bg-mint/60 p-4 text-sm">
+            <h3 class="flex items-center gap-2 font-bold text-forest"><i data-lucide="notebook-pen" class="h-4 w-4"></i> Catatan Kurasi Moderator</h3>
+            <p class="mt-1 whitespace-pre-line">{{ $report->moderator_note }}</p>
+            @if ($report->moderator)
+                <p class="mt-1 text-xs text-[#0f2a1d]/60">— {{ $report->moderator->name }}, {{ $report->moderated_at?->translatedFormat('d M Y, H:i') }}</p>
+            @endif
+        </section>
+    @endif
+
+    {{-- ===== Aksi moderator ===== --}}
+    @include('moderation.partials.actions')
+
     {{-- ===== Riwayat status ===== --}}
     @if ($report->statusHistories->isNotEmpty())
         <section>

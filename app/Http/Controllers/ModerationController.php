@@ -6,9 +6,11 @@ use App\Enums\DamageCategory;
 use App\Enums\ReportStatus;
 use App\Models\DamageReport;
 use App\Models\ReportStatusHistory;
+use App\Services\ReportStatusService;
 use App\Support\ExifReader;
 use App\Support\ReportPresenter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -24,16 +26,16 @@ class ModerationController extends Controller
         'severity' => 'Severity tertinggi',
     ];
 
-    public function index(Request $request): View
+    public function index(Request $request, ReportStatusService $statuses): View
     {
-        $filters = $request->validate([
+        $filters = array_filter($request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::in([...ReportStatus::values(), 'all'])],
             'category' => ['nullable', Rule::enum(DamageCategory::class)],
             'severity' => ['nullable', 'integer', 'between:1,5'],
             'sort' => ['nullable', Rule::in(array_keys(self::SORTS))],
             'report' => ['nullable', 'integer'],
-        ]) + ['status' => ReportStatus::Pending->value, 'sort' => 'oldest'];
+        ]), fn ($v) => $v !== null && $v !== '') + ['status' => ReportStatus::Pending->value, 'sort' => 'oldest'];
 
         $queue = $this->queueQuery($filters)
             ->paginate(config('moderation.queue_per_page', 15))
@@ -46,9 +48,12 @@ class ModerationController extends Controller
             'queue' => $queue,
             'selected' => $selected,
             'selectedStatus' => $selected?->statusEnum(),
+            'allowedTransitions' => $selected ? $statuses->allowedTransitions($selected) : [],
+            'returnQuery' => http_build_query(array_intersect_key($filters, array_flip(['q', 'status', 'category', 'severity', 'sort']))),
             'reporterStats' => $selected ? $this->reporterStats($selected) : null,
             'evidence' => $selected ? $this->evidence($selected) : null,
             'stats' => $this->stats(),
+            'recentActions' => $this->recentActions(),
             'categories' => DamageCategory::cases(),
             'statusOptions' => ReportStatus::cases(),
             'sorts' => self::SORTS,
@@ -144,6 +149,16 @@ class ModerationController extends Controller
             'photo_total' => $report->photos->count(),
             'device' => null, // kolom perangkat belum disimpan oleh form laporan
         ];
+    }
+
+    /** Tabel "Log Tindakan Kurasi Terkini". */
+    private function recentActions(): Collection
+    {
+        return ReportStatusHistory::query()
+            ->with(['report:id,heritage_site_id', 'report.site:id,name', 'changedBy:id,name'])
+            ->latest('id')
+            ->limit(10)
+            ->get();
     }
 
     private function stats(): array
