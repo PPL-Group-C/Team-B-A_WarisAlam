@@ -55,7 +55,7 @@ export function setupFilters({ form, map, layer, markers, onChange, resetView })
             resetView();
         }
 
-        onChange(visible.length, markers.length, filters);
+        onChange(visible, markers.length, filters);
     };
 
     form.querySelector('#filter-search')?.addEventListener('input', () => {
@@ -68,5 +68,5 @@ export function setupFilters({ form, map, layer, markers, onChange, resetView })
     // The reset event fires before the inputs are cleared, so wait one tick.
     form.addEventListener('reset', () => setTimeout(apply));
 
-    onChange(markers.length, markers.length, readFilters(form));
+    onChange(markers, markers.length, readFilters(form));
 }

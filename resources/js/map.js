@@ -5,27 +5,11 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import '../css/map.css';
 import { setupFilters } from './map-filters';
 import { enableTrackpadGestures } from './map-gestures';
+import { STATUS_STYLES, TYPE_LABELS, escapeHtml } from './map-shared';
+import { createSiteList } from './site-list';
 
 const INDONESIA_CENTER = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
-
-export const STATUS_STYLES = {
-    safe: { label: 'Aman', color: '#059669', rank: 0 },
-    watch: { label: 'Waspada', color: '#f59e0b', rank: 1 },
-    threatened: { label: 'Terancam', color: '#dc2626', rank: 2 },
-};
-
-const TYPE_LABELS = {
-    cultural: 'Cagar Budaya',
-    natural: 'Cagar Alam',
-};
-
-function escapeHtml(value) {
-    const div = document.createElement('div');
-    div.textContent = value ?? '';
-
-    return div.innerHTML;
-}
 
 function popupContent(site) {
     const style = STATUS_STYLES[site.status] ?? STATUS_STYLES.safe;
@@ -264,6 +248,7 @@ async function initMap() {
 
         const noResultsBox = document.getElementById('map-no-results');
         const countLabel = document.getElementById('filter-count');
+        const siteList = createSiteList({ map, layer });
 
         setupFilters({
             form: document.getElementById('map-filters'),
@@ -273,11 +258,12 @@ async function initMap() {
             resetView: () => map.setView(INDONESIA_CENTER, INDONESIA_ZOOM),
             onChange: (visible, total) => {
                 if (countLabel) {
-                    countLabel.textContent = visible === total
+                    countLabel.textContent = visible.length === total
                         ? `Menampilkan semua ${total} situs`
-                        : `Menampilkan ${visible} dari ${total} situs`;
+                        : `Menampilkan ${visible.length} dari ${total} situs`;
                 }
-                visible === 0 ? show(noResultsBox) : hide(noResultsBox);
+                visible.length === 0 ? show(noResultsBox) : hide(noResultsBox);
+                siteList.update(visible);
             },
         });
     } catch (error) {

@@ -62,6 +62,7 @@
 
         <p id="filter-count" class="-mt-2 mb-3 text-xs text-stone-500" aria-live="polite"></p>
 
+        <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
             <div id="site-map" data-sites-url="{{ route('map.sites') }}" class="h-[70vh] min-h-[420px] w-full bg-emerald-50"></div>
 
@@ -103,6 +104,26 @@
                 </ul>
             </div>
         </section>
+
+        <aside class="flex max-h-[70vh] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm" aria-labelledby="site-list-title">
+            <div class="border-b border-stone-100 p-4">
+                <h2 id="site-list-title" class="font-semibold text-emerald-900">Katalog Situs Terpantau</h2>
+                <div class="mt-2 space-y-1.5">
+                    <p class="text-xs text-stone-500">Urutkan prioritas penanganan:</p>
+                    <div id="site-sort" role="radiogroup" aria-label="Urutan katalog" class="grid grid-cols-3 rounded-lg bg-stone-100 p-0.5 text-xs font-medium">
+                        <button type="button" role="radio" data-sort="risk" aria-checked="true" class="site-sort__btn">Paling Rawan</button>
+                        <button type="button" role="radio" data-sort="nearest" aria-checked="false" class="site-sort__btn">Terdekat</button>
+                        <button type="button" role="radio" data-sort="name" aria-checked="false" class="site-sort__btn">A&ndash;Z</button>
+                    </div>
+                </div>
+                <p id="site-sort-note" class="mt-2 hidden text-xs text-amber-700"></p>
+            </div>
+
+            <ol id="site-list" class="flex-1 space-y-2 overflow-y-auto p-3"></ol>
+
+            <p id="site-list-empty" class="hidden p-6 text-center text-sm text-stone-500">No sites found.</p>
+        </aside>
+        </div>
     </main>
 </body>
 </html>
