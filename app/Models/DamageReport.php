@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DamageCategory;
 use App\Enums\ReportStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,7 @@ class DamageReport extends Model
             'declaration_accepted_at' => 'datetime',
             'submitted_at' => 'datetime',
             'moderated_at' => 'datetime', // F08
+            'rejected_as_duplicate' => 'boolean', // F08
         ];
     }
 
@@ -40,6 +42,30 @@ class DamageReport extends Model
     public function moderator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'moderated_by');
+    }
+
+    /** Laporan induk bila laporan ini ditandai duplikat. */
+    public function duplicateOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'duplicate_of_id');
+    }
+
+    /** Laporan lain yang ditandai sebagai duplikat dari laporan ini. */
+    public function duplicates(): HasMany
+    {
+        return $this->hasMany(self::class, 'duplicate_of_id');
+    }
+
+    public function isDuplicate(): bool
+    {
+        return $this->duplicate_of_id !== null || $this->rejected_as_duplicate;
+    }
+
+    /** Kecualikan laporan duplikat, mis. untuk skor ancaman situs (FR-17). */
+    public function scopeNotDuplicate(Builder $query): void
+    {
+        $query->whereNull($query->qualifyColumn('duplicate_of_id'))
+            ->where($query->qualifyColumn('rejected_as_duplicate'), false);
     }
 
     public function user(): BelongsTo

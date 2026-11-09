@@ -6,6 +6,7 @@ use App\Enums\DamageCategory;
 use App\Enums\ReportStatus;
 use App\Models\DamageReport;
 use App\Models\ReportStatusHistory;
+use App\Services\DuplicateReportService;
 use App\Services\ReportStatusService;
 use App\Support\ExifReader;
 use App\Support\ReportPresenter;
@@ -26,7 +27,7 @@ class ModerationController extends Controller
         'severity' => 'Severity tertinggi',
     ];
 
-    public function index(Request $request, ReportStatusService $statuses): View
+    public function index(Request $request, ReportStatusService $statuses, DuplicateReportService $duplicates): View
     {
         $filters = array_filter($request->validate([
             'q' => ['nullable', 'string', 'max:100'],
@@ -42,6 +43,7 @@ class ModerationController extends Controller
             ->withQueryString();
 
         $selected = $this->selectedReport($request->integer('report') ?: $queue->first()?->id);
+        $selectedIsPending = $selected?->status === ReportStatus::Pending->value;
 
         return view('moderation.index', [
             'filters' => $filters,
@@ -52,6 +54,9 @@ class ModerationController extends Controller
             'returnQuery' => http_build_query(array_intersect_key($filters, array_flip(['q', 'status', 'category', 'severity', 'sort']))),
             'reporterStats' => $selected ? $this->reporterStats($selected) : null,
             'evidence' => $selected ? $this->evidence($selected) : null,
+            'candidateMap' => $duplicates->candidateMapFor($queue->getCollection()),
+            'candidates' => $selectedIsPending ? $duplicates->candidatesFor($selected) : collect(),
+            'parentOptions' => $selectedIsPending ? $duplicates->eligibleParents($selected) : collect(),
             'stats' => $this->stats(),
             'recentActions' => $this->recentActions(),
             'categories' => DamageCategory::cases(),
@@ -102,6 +107,9 @@ class ModerationController extends Controller
                 'photos',
                 'moderator:id,name',
                 'statusHistories.changedBy:id,name',
+                'duplicateOf:id,user_id,status,submitted_at',
+                'duplicates:id,user_id,duplicate_of_id,status,submitted_at,is_anonymous',
+                'duplicates.user:id,name',
             ])
             ->find($id);
     }
@@ -188,7 +196,7 @@ class ModerationController extends Controller
             'pending' => (int) $pending->total,
             'emergency' => (int) $pending->emergency,
             'verified_today' => $verifiedToday,
-            'duplicates' => null, // diisi di PBI-24
+            'duplicates' => DamageReport::query()->where('rejected_as_duplicate', true)->count(),
             'avg_response_hours' => $avgResponseHours,
         ];
     }

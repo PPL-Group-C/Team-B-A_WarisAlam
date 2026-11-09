@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReportStatus;
+use App\Exceptions\InvalidDuplicateException;
 use App\Exceptions\InvalidStatusTransitionException;
 use App\Models\DamageReport;
+use App\Services\DuplicateReportService;
 use App\Services\ReportStatusService;
 use App\Support\ReportPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -12,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * F08 Moderasi (PBI-23): Setujui / Tolak / Konfirmasi Selesai.
+ * F08 Moderasi (PBI-23/24): Setujui / Tolak / Konfirmasi Selesai / Tandai Duplikat.
  * Semua perubahan status lewat ReportStatusService.
  */
 class ModerationActionController extends Controller
@@ -80,6 +82,31 @@ class ModerationActionController extends Controller
 
         return $this->apply($request, $report, ReportStatus::Resolved, [$data['resolution_note']], [],
             'Penyelesaian laporan '.ReportPresenter::code($report->id).' dikonfirmasi.');
+    }
+
+    public function markDuplicate(Request $request, DamageReport $report, DuplicateReportService $duplicates): RedirectResponse
+    {
+        Gate::authorize('moderate-reports');
+
+        $data = $request->validate([
+            'duplicate_of_id' => ['required', 'integer', 'exists:damage_reports,id'],
+            'duplicate_note' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'duplicate_of_id.required' => 'Pilih laporan induk terlebih dahulu.',
+            'duplicate_of_id.exists' => 'Laporan induk tidak ditemukan.',
+        ]);
+
+        $parent = DamageReport::findOrFail($data['duplicate_of_id']);
+
+        try {
+            $duplicates->markAsDuplicate($report, $parent, $request->user(), $data['duplicate_note'] ?? null);
+        } catch (InvalidDuplicateException|InvalidStatusTransitionException $e) {
+            return redirect()->route('moderation.index', $this->queueQuery($request) + ['report' => $report->id])
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('moderation.index', $this->queueQuery($request))->with('success',
+            'Laporan '.ReportPresenter::code($report->id).' ditandai sebagai duplikat dari '.ReportPresenter::code($parent->id).'.');
     }
 
     private function apply(

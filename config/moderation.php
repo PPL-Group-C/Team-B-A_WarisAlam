@@ -16,4 +16,8 @@ return [
 
     /** Severity minimum yang dihitung sebagai "Darurat". */
     'emergency_severity' => 4,
+
+    /** Kandidat duplikat (tanpa AI): situs sama, radius & selisih waktu kirim. */
+    'duplicate_radius_m' => 50,
+    'duplicate_window_days' => 7,
 ];

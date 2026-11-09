@@ -7,6 +7,7 @@ use App\Enums\ReportStatus;
 use App\Models\DamageReport;
 use App\Models\HeritageSite;
 use App\Models\User;
+use App\Services\DuplicateReportService;
 use App\Services\ReportStatusService;
 use Database\Factories\DamageReportFactory;
 use Illuminate\Database\Seeder;
@@ -53,6 +54,7 @@ class ModerationDemoSeeder extends Seeder
             ['prambanan', 2, DamageCategory::PhysicalDamage, 2, 60 * 72, false, 400, 'Pelapukan batu pada pagar langkan Candi Brahma.'],
             ['muarojambi', 3, DamageCategory::Waste, 3, 60 * 30, false, 60, 'Limbah oli dibuang ke kanal kuno di sisi barat kompleks.'],
             ['borobudur', 0, DamageCategory::Vandalism, 3, 60 * 96, false, 20, 'Coretan spidol hitam pada relief Karmawibhangga sisi utara.'],
+            ['sangiran', 4, DamageCategory::Other, 4, 60 * 49, true, 305, 'Lubang galian baru di tebing dekat museum, tampak seperti dicari fosilnya.'],
         ];
 
         $reports = [];
@@ -83,6 +85,9 @@ class ModerationDemoSeeder extends Seeder
         $statuses->transition($reports[11], ReportStatus::Verified, $moderator, null, ['moderator_note' => 'Coretan terverifikasi, perlu pembersihan non-destruktif.']);
         $statuses->transition($reports[11], ReportStatus::Forwarded, null, 'Diteruskan ke BPK Wilayah X (simulasi F09).');
         $statuses->transition($reports[11], ReportStatus::InProgress, null, 'Tim BPK menjadwalkan pembersihan (simulasi instansi).');
+
+        // Contoh duplikat yang sudah ditautkan (PBI-24): laporan galian Sangiran kedua (±5 m, 1 jam) → laporan pertama.
+        app(DuplicateReportService::class)->markAsDuplicate($reports[12], $reports[6], $moderator);
 
         if (! in_array(self::MODERATOR_EMAIL, config('moderation.moderator_emails'), true)) {
             $this->command?->warn('Tambahkan MODERATOR_EMAILS='.self::MODERATOR_EMAIL.' ke .env agar akun ini bisa membuka /moderasi.');

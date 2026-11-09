@@ -17,6 +17,12 @@
                 @else
                     <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">Status: {{ $report->status }}</span>
                 @endif
+                @if ($report->duplicate_of_id)
+                    <a href="{{ route('moderation.index', ['status' => 'all', 'report' => $report->duplicate_of_id]) }}" data-testid="duplicate-of-badge"
+                       class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 hover:underline">
+                        <i data-lucide="link" class="h-3 w-3"></i> Duplikat dari {{ ReportPresenter::code($report->duplicate_of_id) }}
+                    </a>
+                @endif
             </div>
             <p class="mt-3 text-xs text-[#0f2a1d]/70">Waktu Kirim: {{ $report->submitted_at?->translatedFormat('d M Y, H:i') ?? '-' }} WIB</p>
             <h2 class="mt-1 text-xl font-bold text-forest sm:text-2xl">{{ $report->site?->name ?? 'Situs tidak diketahui' }}</h2>
@@ -143,6 +149,9 @@
             @endif
         </section>
     @endif
+
+    {{-- ===== Duplikat (PBI-24) ===== --}}
+    @include('moderation.partials.duplicates')
 
     {{-- ===== Aksi moderator ===== --}}
     @include('moderation.partials.actions')

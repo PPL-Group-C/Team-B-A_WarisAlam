@@ -22,6 +22,19 @@
                     <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $report->statusEnum()->badgeClasses() }}">{{ $report->statusEnum()->label() }}</span>
                 @endif
             </div>
+            @php $similar = $candidateMap[$report->id] ?? []; @endphp
+            @if ($report->duplicate_of_id)
+                <span class="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                    <i data-lucide="link" class="h-3 w-3"></i> Duplikat dari {{ ReportPresenter::code($report->duplicate_of_id) }}
+                </span>
+            @elseif ($similar)
+                <span class="mt-1 inline-flex flex-wrap items-center gap-1" data-testid="candidate-badge">
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Kandidat Duplikat</span>
+                    <span class="inline-flex items-center gap-1 text-[10px] text-[#0f2a1d]/70">
+                        <i data-lucide="link" class="h-3 w-3"></i> Mirip {{ ReportPresenter::code($similar[0]) }}@if (count($similar) > 1) +{{ count($similar) - 1 }}@endif
+                    </span>
+                </span>
+            @endif
             <p class="mt-1 truncate font-semibold">{{ $report->site?->name ?? 'Situs tidak diketahui' }}</p>
             <p class="line-clamp-2 text-xs text-[#0f2a1d]/70">{{ $report->description ?: 'Tanpa deskripsi.' }}</p>
         </div>

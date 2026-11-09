@@ -18,4 +18,5 @@ Route::middleware('can:moderate-reports')
         Route::post('/{report}/setujui', [ModerationActionController::class, 'approve'])->name('approve');
         Route::post('/{report}/tolak', [ModerationActionController::class, 'reject'])->name('reject');
         Route::post('/{report}/selesai', [ModerationActionController::class, 'resolve'])->name('resolve');
+        Route::post('/{report}/duplikat', [ModerationActionController::class, 'markDuplicate'])->name('duplicate');
     });
