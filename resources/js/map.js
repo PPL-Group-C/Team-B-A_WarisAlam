@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import '../css/map.css';
 import { setupFilters } from './map-filters';
+import { enableTrackpadGestures } from './map-gestures';
 
 const INDONESIA_CENTER = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
@@ -220,7 +221,13 @@ async function initMap() {
         map = L.map(container, {
             zoomControl: false,
             minZoom: 4,
+            maxZoom: 18,
+            scrollWheelZoom: false, // replaced by enableTrackpadGestures
+            zoomSnap: 0, // allow smooth pinch zoom
+            zoomDelta: 1, // +/- buttons still step one level
         }).setView(INDONESIA_CENTER, INDONESIA_ZOOM);
+
+        enableTrackpadGestures(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);

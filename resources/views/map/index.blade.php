@@ -73,6 +73,10 @@
                 Belum ada situs yang terdata.
             </div>
 
+            <p class="pointer-events-none absolute right-3 top-3 z-[1000] hidden rounded-full bg-white/90 px-3 py-1 text-xs text-stone-600 shadow md:block">
+                Geser: dua jari / drag &middot; Zoom: cubit / Ctrl + scroll
+            </p>
+
             <div id="map-no-results" role="status" class="absolute inset-x-0 top-4 z-[1000] mx-auto hidden w-fit rounded-lg bg-white px-4 py-2 text-sm text-stone-700 shadow">
                 <b>No sites found.</b> Tidak ada situs yang cocok dengan filter. Coba ubah atau reset filter.
             </div>
