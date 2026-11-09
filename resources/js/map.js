@@ -1,14 +1,16 @@
-import L from 'leaflet';
+import L from './leaflet-global';
+import 'leaflet.markercluster';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 import '../css/map.css';
 
 const INDONESIA_CENTER = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
 
 export const STATUS_STYLES = {
-    safe: { label: 'Aman', color: '#059669' },
-    watch: { label: 'Waspada', color: '#f59e0b' },
-    threatened: { label: 'Terancam', color: '#dc2626' },
+    safe: { label: 'Aman', color: '#059669', rank: 0 },
+    watch: { label: 'Waspada', color: '#f59e0b', rank: 1 },
+    threatened: { label: 'Terancam', color: '#dc2626', rank: 2 },
 };
 
 function show(element, message) {
@@ -36,12 +38,37 @@ function markerIcon(status) {
     });
 }
 
+// A cluster takes the colour of the most threatened site inside it,
+// so a red site never hides behind a green cluster.
+function clusterIcon(cluster) {
+    const worst = cluster
+        .getAllChildMarkers()
+        .map((marker) => STATUS_STYLES[marker.options.status] ?? STATUS_STYLES.safe)
+        .reduce((a, b) => (b.rank > a.rank ? b : a), STATUS_STYLES.safe);
+
+    const count = cluster.getChildCount();
+    const size = count < 10 ? 36 : count < 50 ? 44 : 52;
+
+    return L.divIcon({
+        className: 'site-cluster',
+        html: `<span class="site-cluster__bubble" style="--pin-color: ${worst.color}">${count}</span>`,
+        iconSize: [size, size],
+    });
+}
+
 function renderMarkers(map, sites) {
-    const layer = L.layerGroup();
+    const layer = L.markerClusterGroup({
+        iconCreateFunction: clusterIcon,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        zoomToBoundsOnClick: true,
+        maxClusterRadius: 50,
+    });
 
     sites.forEach((site) => {
         L.marker([site.lat, site.lng], {
             icon: markerIcon(site.status),
+            status: site.status,
             title: site.name,
             alt: `${site.name} (${STATUS_STYLES[site.status]?.label ?? site.status})`,
         })
