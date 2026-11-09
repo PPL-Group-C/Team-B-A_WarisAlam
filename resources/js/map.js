@@ -104,7 +104,6 @@ function renderMarkers(map, sites) {
             title: site.name,
             alt: `${site.name} (${STATUS_STYLES[site.status]?.label ?? site.status})`,
         })
-            .bindTooltip(site.name, { direction: 'top', offset: [0, -10] })
             .bindPopup(() => popupContent(site), {
                 className: 'site-popup-wrapper',
                 maxWidth: 300,
@@ -114,7 +113,55 @@ function renderMarkers(map, sites) {
             .addTo(layer);
     });
 
+    layer.getLayers().forEach(attachHoverPopup);
+
     return layer.addTo(map);
+}
+
+const HOVER_CLOSE_DELAY = 250;
+const canHover = window.matchMedia('(hover: hover)').matches;
+
+// Hovering a marker previews its popup; clicking pins it open.
+// The popup stays open while the pointer moves from the marker onto the card,
+// so the "Lihat Detail Situs" button can still be clicked.
+function attachHoverPopup(marker) {
+    let closeTimer = null;
+    let pinned = false;
+
+    const cancelClose = () => clearTimeout(closeTimer);
+    const scheduleClose = () => {
+        cancelClose();
+        if (!pinned) {
+            closeTimer = setTimeout(() => marker.closePopup(), HOVER_CLOSE_DELAY);
+        }
+    };
+    const open = (pin) => {
+        cancelClose();
+        pinned = pinned || pin;
+        marker.getPopup().options.autoPan = pin;
+        if (!marker.isPopupOpen()) {
+            marker.openPopup();
+        }
+    };
+
+    // Replace Leaflet's default click toggle so a click never closes a hover preview.
+    marker.off('click', marker._openPopup, marker);
+    marker.on('click', () => open(true));
+
+    marker.on('popupopen', (event) => {
+        const element = event.popup.getElement();
+        element.addEventListener('mouseenter', cancelClose);
+        element.addEventListener('mouseleave', scheduleClose);
+    });
+    marker.on('popupclose', () => {
+        pinned = false;
+        cancelClose();
+    });
+
+    if (canHover) {
+        marker.on('mouseover', () => open(false));
+        marker.on('mouseout', scheduleClose);
+    }
 }
 
 function renderSummary(sites) {
