@@ -13,6 +13,38 @@ export const STATUS_STYLES = {
     threatened: { label: 'Terancam', color: '#dc2626', rank: 2 },
 };
 
+const TYPE_LABELS = {
+    cultural: 'Cagar Budaya',
+    natural: 'Cagar Alam',
+};
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value ?? '';
+
+    return div.innerHTML;
+}
+
+function popupContent(site) {
+    const style = STATUS_STYLES[site.status] ?? STATUS_STYLES.safe;
+    const score = Number(site.threat_score ?? 0).toFixed(1);
+    const location = [site.city, site.province].filter(Boolean).map(escapeHtml).join(', ');
+
+    return `
+        <article class="site-popup">
+            <header class="site-popup__cover site-popup__cover--${escapeHtml(site.type)}">
+                <span class="site-popup__badge">${escapeHtml(site.category ?? TYPE_LABELS[site.type])}</span>
+                <span class="site-popup__status" style="--pin-color: ${style.color}">${style.label} &bull; Skor ${score}</span>
+            </header>
+            <div class="site-popup__body">
+                <h3 class="site-popup__title">${escapeHtml(site.name)}</h3>
+                <p class="site-popup__meta">${escapeHtml(TYPE_LABELS[site.type] ?? site.type)} &middot; ${location}</p>
+                <a class="site-popup__link" href="${escapeHtml(site.detail_url)}">Lihat Detail Situs &rarr;</a>
+            </div>
+        </article>
+    `;
+}
+
 function show(element, message) {
     if (!element) {
         return;
@@ -73,6 +105,12 @@ function renderMarkers(map, sites) {
             alt: `${site.name} (${STATUS_STYLES[site.status]?.label ?? site.status})`,
         })
             .bindTooltip(site.name, { direction: 'top', offset: [0, -10] })
+            .bindPopup(() => popupContent(site), {
+                className: 'site-popup-wrapper',
+                maxWidth: 300,
+                minWidth: 260,
+                offset: [0, -6],
+            })
             .addTo(layer);
     });
 
