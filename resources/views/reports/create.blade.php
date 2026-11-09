@@ -14,7 +14,10 @@
       @keydown.enter="if ($event.target.tagName === 'INPUT') $event.preventDefault()"
       class="space-y-8">
     @csrf
-
+        <input type="hidden" name="latitude" :value="lat">
+        <input type="hidden" name="longitude" :value="lng">
+        <input type="hidden" name="gps_accuracy_m" :value="accuracy">
+        <input type="hidden" name="location_source" :value="locationSource">
     @if (session('status'))
         <div class="rounded-lg bg-forest px-5 py-3 text-sm text-white" role="status">{{ session('status') }}</div>
     @endif
@@ -157,6 +160,9 @@
                     <figcaption class="px-1 pb-1 pt-2 text-xs">
                         <span class="flex justify-between gap-2 text-sm font-semibold"><span class="truncate" x-text="p.name"></span><span class="shrink-0 font-normal" x-text="`${p.size} MB`"></span></span>
                         <span class="text-forest" x-text="p.takenAt"></span>
+                        <button type="button" x-show="p.gps && !photoState(p).ok" x-cloak
+                        @click="setPin(p.gps.latitude, p.gps.longitude, 19, 'exif')"
+                        class="mt-1 text-xs font-semibold text-forest underline">Pakai lokasi foto ini</button>
                     </figcaption>
                 </figure>
             </template>
@@ -277,7 +283,7 @@ document.addEventListener('alpine:init', () => {
             siteId: old.heritage_site_id ? Number(old.heritage_site_id) : null,
             siteQuery: '', siteOpen: false,
             lat: old.latitude ?? '', lng: old.longitude ?? '', accuracy: old.gps_accuracy_m ?? '',
-            gpsState: 'idle', basemap: 'sat',
+            gpsState: 'idle', basemap: 'sat', locationSource: old.location_source ?? '',
             photos: [], photoError: '', dragging: false,
             category: old.category ?? '',
             severity: Number(old.severity ?? 3),
@@ -303,6 +309,8 @@ document.addEventListener('alpine:init', () => {
                     wait: { dot: 'bg-amber-500', text: 'Mencari sinyal GPS…' },
                     ok: { dot: 'bg-forest', text: 'Sinyal GPS Optimal' },
                     manual: { dot: 'bg-forest', text: 'Pin diatur manual' },
+                    exif: { dot: 'bg-forest', text: 'Lokasi dari EXIF foto. Seret pin untuk menyesuaikan' },
+                    site: { dot: 'bg-slate-400', text: 'Pin di titik situs. Seret untuk menyesuaikan' },
                     error: { dot: 'bg-red-600', text: 'GPS gagal. Ketuk peta untuk memilih titik.' },
                 }[this.gpsState];
             },
@@ -338,8 +346,8 @@ document.addEventListener('alpine:init', () => {
                     .bindTooltip('Titik Insiden Terpilih', { permanent: true, direction: 'bottom' });
                 if (this.lat !== '') marker.addTo(map);
 
-                map.on('click', e => this.setPin(e.latlng.lat, e.latlng.lng, null, true));
-                marker.on('dragend', () => { const p = marker.getLatLng(); this.setPin(p.lat, p.lng, null, true); });
+                map.on('click', e => this.setPin(e.latlng.lat, e.latlng.lng, null, 'manual'));
+                marker.on('dragend', () => { const p = marker.getLatLng(); this.setPin(p.lat, p.lng, null, 'manual'); });
 
                 this.$watch('basemap', v => {
                     map.removeLayer(v === 'sat' ? tiles.topo : tiles.sat);
@@ -348,10 +356,12 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => map.invalidateSize(), 200);
             },
 
-            setPin(lat, lng, zoom = null, manual = false) {
+            setPin(lat, lng, zoom = null, source = 'manual') {
                 this.lat = Number(lat).toFixed(6);
                 this.lng = Number(lng).toFixed(6);
-                if (manual) { this.accuracy = ''; this.gpsState = 'manual'; }
+                this.locationSource = source;
+                this.gpsState = source;                 // idle|site|exif|gps|manual
+                if (source !== 'gps') this.accuracy = '';
                 marker.setLatLng([lat, lng]).addTo(map);
                 if (zoom) map.setView([lat, lng], zoom);
             },
@@ -361,7 +371,7 @@ document.addEventListener('alpine:init', () => {
                 this.siteId = s.id;
                 this.siteQuery = s.name;
                 this.siteOpen = false;
-                this.setPin(Number(s.latitude), Number(s.longitude), 17, true);
+                this.setPin(Number(s.latitude), Number(s.longitude), 17, 'site');
             },
 
             locate() {
@@ -369,7 +379,7 @@ document.addEventListener('alpine:init', () => {
                 this.gpsState = 'wait';
                 navigator.geolocation.getCurrentPosition(
                     p => {
-                        this.setPin(p.coords.latitude, p.coords.longitude, 18);
+                        this.setPin(p.coords.latitude, p.coords.longitude, 18, 'gps');
                         this.accuracy = Math.round(p.coords.accuracy);
                         this.gpsState = 'ok';
                     },
@@ -386,14 +396,20 @@ document.addEventListener('alpine:init', () => {
                     if (file.size > 10 * 1048576) { this.photoError = `${file.name}: ukuran melebihi 10 MB.`; continue; }
 
                     let gps = null;
-                    try { gps = (await exifr.gps(file)) ?? null; } catch (e) { /* no EXIF */ }
+                    try {
+                        const g = await exifr.gps(file);
+                        if (g && Number.isFinite(g.latitude) && Number.isFinite(g.longitude)) gps = g;
+                    } catch (e) { /* no EXIF */ }
 
-                    this.photos.push({
+                    this.photos.push({ 
                         key: crypto.randomUUID(), file, gps,
                         url: URL.createObjectURL(file), name: file.name,
                         bytes: file.size, size: (file.size / 1048576).toFixed(1),
                         takenAt: new Date(file.lastModified).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }),
                     });
+                    if (gps && ['', 'site'].includes(this.locationSource)) {
+                     this.setPin(gps.latitude, gps.longitude, 19, 'exif');
+                    }
                 }
                 this.syncInput();
             },

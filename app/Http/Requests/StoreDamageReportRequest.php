@@ -28,6 +28,7 @@ class StoreDamageReportRequest extends FormRequest
             'latitude' => [$need, 'numeric', 'between:-90,90'],
             'longitude' => [$need, 'numeric', 'between:-180,180'],
             'gps_accuracy_m' => ['nullable', 'integer', 'min:0'],
+            'location_source' => ['nullable', 'in:site,exif,gps,manual'],
 
             'photos' => [$need, 'array', 'max:5'],
             'photos.*' => ['image', 'mimes:jpg,jpeg,png', 'max:10240'], // 10 MB, in KB

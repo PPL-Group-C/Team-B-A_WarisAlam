@@ -12,31 +12,38 @@ use Illuminate\Http\UploadedFile;
 final class ExifReader
 {
     /** @return array{lat: ?float, lng: ?float, taken_at: ?Carbon} */
-    public static function read(UploadedFile $file): array
-    {
-        $empty = ['lat' => null, 'lng' => null, 'taken_at' => null];
+public static function read(UploadedFile $file): array
+{
+    $empty = ['lat' => null, 'lng' => null, 'taken_at' => null];
 
-        if (! function_exists('exif_read_data')) {
-            return $empty;
-        }
-
-        $exif = @exif_read_data($file->getRealPath());
-
-        if (! $exif) {
-            return $empty;
-        }
-
-        $hasGps = ! empty($exif['GPSLatitude']) && ! empty($exif['GPSLongitude']);
-
-        return [
-            'lat' => $hasGps ? self::toDecimal($exif['GPSLatitude'], $exif['GPSLatitudeRef'] ?? 'N') : null,
-            'lng' => $hasGps ? self::toDecimal($exif['GPSLongitude'], $exif['GPSLongitudeRef'] ?? 'E') : null,
-            'taken_at' => rescue(fn () => isset($exif['DateTimeOriginal'])
-                ? Carbon::createFromFormat('Y:m:d H:i:s', $exif['DateTimeOriginal'])
-                : null, null, false),
-        ];
+    if (! function_exists('exif_read_data')) {
+        return $empty;
     }
 
+    $exif = @exif_read_data($file->getRealPath());
+
+    if (! $exif) {
+        return $empty;
+    }
+
+    $hasGps = ! empty($exif['GPSLatitude']) && ! empty($exif['GPSLongitude']);
+
+    $lat = $hasGps ? self::toDecimal($exif['GPSLatitude'], $exif['GPSLatitudeRef'] ?? 'N') : null;
+    $lng = $hasGps ? self::toDecimal($exif['GPSLongitude'], $exif['GPSLongitudeRef'] ?? 'E') : null;
+
+    // 0,0 means the phone wrote empty GPS tags (no satellite fix): treat as "no GPS".
+    if ($lat === null || $lng === null || ($lat == 0.0 && $lng == 0.0)) {
+        $lat = $lng = null;
+    }
+
+    return [
+        'lat' => $lat,
+        'lng' => $lng,
+        'taken_at' => rescue(fn () => isset($exif['DateTimeOriginal'])
+            ? Carbon::createFromFormat('Y:m:d H:i:s', $exif['DateTimeOriginal'])
+            : null, null, false),
+    ];
+}
     public static function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $rad = M_PI / 180;
