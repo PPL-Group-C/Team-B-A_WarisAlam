@@ -3,6 +3,7 @@ import 'leaflet.markercluster';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import '../css/map.css';
+import { setupFilters } from './map-filters';
 
 const INDONESIA_CENTER = [-2.5, 118];
 const INDONESIA_ZOOM = 5;
@@ -101,6 +102,7 @@ function renderMarkers(map, sites) {
         L.marker([site.lat, site.lng], {
             icon: markerIcon(site.status),
             status: site.status,
+            site,
             title: site.name,
             alt: `${site.name} (${STATUS_STYLES[site.status]?.label ?? site.status})`,
         })
@@ -250,7 +252,27 @@ async function initMap() {
         }
 
         window.warisAlamSites = sites;
-        window.warisAlamMarkers = renderMarkers(map, sites);
+        const layer = renderMarkers(map, sites);
+        window.warisAlamMarkers = layer;
+
+        const noResultsBox = document.getElementById('map-no-results');
+        const countLabel = document.getElementById('filter-count');
+
+        setupFilters({
+            form: document.getElementById('map-filters'),
+            map,
+            layer,
+            markers: layer.getLayers(),
+            resetView: () => map.setView(INDONESIA_CENTER, INDONESIA_ZOOM),
+            onChange: (visible, total) => {
+                if (countLabel) {
+                    countLabel.textContent = visible === total
+                        ? `Menampilkan semua ${total} situs`
+                        : `Menampilkan ${visible} dari ${total} situs`;
+                }
+                visible === 0 ? show(noResultsBox) : hide(noResultsBox);
+            },
+        });
     } catch (error) {
         console.error(error);
         show(errorBox, 'Data situs gagal dimuat. Coba muat ulang halaman.');

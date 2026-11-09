@@ -60,6 +60,8 @@
             </button>
         </form>
 
+        <p id="filter-count" class="-mt-2 mb-3 text-xs text-stone-500" aria-live="polite"></p>
+
         <section class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
             <div id="site-map" data-sites-url="{{ route('map.sites') }}" class="h-[70vh] min-h-[420px] w-full bg-emerald-50"></div>
 
@@ -69,6 +71,10 @@
 
             <div id="map-empty" class="absolute inset-x-0 top-4 z-[1000] mx-auto hidden w-fit rounded-lg bg-white px-4 py-2 text-sm text-stone-600 shadow">
                 Belum ada situs yang terdata.
+            </div>
+
+            <div id="map-no-results" role="status" class="absolute inset-x-0 top-4 z-[1000] mx-auto hidden w-fit rounded-lg bg-white px-4 py-2 text-sm text-stone-700 shadow">
+                <b>No sites found.</b> Tidak ada situs yang cocok dengan filter. Coba ubah atau reset filter.
             </div>
 
             <div id="map-error" class="absolute inset-x-0 top-4 z-[1000] mx-auto hidden w-fit rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow">
