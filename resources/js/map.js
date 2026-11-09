@@ -129,6 +129,20 @@ function renderSummary(sites) {
     }
 }
 
+function populateProvinceOptions(sites) {
+    const select = document.getElementById('filter-province');
+    if (!select) {
+        return;
+    }
+
+    const provinces = [...new Set(sites.map((site) => site.province).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'id'));
+
+    select.options[0].textContent = `Semua Provinsi (${provinces.length})`;
+
+    provinces.forEach((province) => select.add(new Option(province, province)));
+}
+
 async function loadSites(url) {
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
 
@@ -181,6 +195,7 @@ async function initMap() {
         const sites = await loadSites(container.dataset.sitesUrl);
 
         renderSummary(sites);
+        populateProvinceOptions(sites);
 
         if (sites.length === 0) {
             show(emptyBox);

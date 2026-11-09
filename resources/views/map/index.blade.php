@@ -30,6 +30,36 @@
             </p>
         </div>
 
+        <form id="map-filters" class="mb-4 grid gap-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]" onsubmit="return false">
+            <label class="sr-only" for="filter-search">Cari situs</label>
+            <input id="filter-search" type="search" autocomplete="off" placeholder="Cari nama situs (misal: Borobudur, Komodo)…"
+                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
+
+            <label class="sr-only" for="filter-type">Tipe situs</label>
+            <select id="filter-type" class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none">
+                <option value="">Semua Tipe</option>
+                <option value="cultural">Cagar Budaya</option>
+                <option value="natural">Cagar Alam</option>
+            </select>
+
+            <label class="sr-only" for="filter-province">Provinsi</label>
+            <select id="filter-province" class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none">
+                <option value="">Semua Provinsi</option>
+            </select>
+
+            <label class="sr-only" for="filter-status">Status ancaman</label>
+            <select id="filter-status" class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none">
+                <option value="">Semua Status Ancaman</option>
+                <option value="safe">Aman</option>
+                <option value="watch">Waspada</option>
+                <option value="threatened">Terancam</option>
+            </select>
+
+            <button id="filter-clear" type="reset" class="rounded-lg border border-emerald-700 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-50">
+                Reset
+            </button>
+        </form>
+
         <section class="relative overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
             <div id="site-map" data-sites-url="{{ route('map.sites') }}" class="h-[70vh] min-h-[420px] w-full bg-emerald-50"></div>
 
