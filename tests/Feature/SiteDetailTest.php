@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\HeritageSite;
+use App\Models\SiteAdoption;
 use App\Models\SitePhoto;
+use App\Models\User;
 use Database\Factories\HeritageSiteFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Detail Situs (Raihan): PBI-13 info & galeri. */
+/** Detail Situs (Raihan): PBI-13 info & galeri, PBI-14 status & skor. */
 class SiteDetailTest extends TestCase
 {
     use RefreshDatabase;
@@ -79,5 +81,28 @@ class SiteDetailTest extends TestCase
         $this->get(route('sites.show', $this->site()))
             ->assertOk()
             ->assertSee('Belum ada foto untuk situs ini.');
+    }
+
+    // ---- PBI-14 -----------------------------------------------------------
+
+    public function test_status_score_and_adopter_count_are_shown(): void
+    {
+        $site = $this->site(['status' => 'watch', 'threat_score' => 8.7]);
+        User::factory()->count(2)->create()->each(
+            fn (User $user) => SiteAdoption::create(['heritage_site_id' => $site->id, 'user_id' => $user->id]),
+        );
+
+        $this->get(route('sites.show', $site))
+            ->assertOk()
+            ->assertSee('Status: Waspada')
+            ->assertSee('<b class="text-2xl" data-testid="threat-score">8,7</b>', false)
+            ->assertSee('<dd class="text-lg font-bold text-forest" data-testid="adopters-count">2</dd>', false);
+    }
+
+    public function test_threatened_site_shows_threatened_status(): void
+    {
+        $this->get(route('sites.show', $this->site(['status' => 'threatened', 'threat_score' => 18.3])))
+            ->assertOk()
+            ->assertSee('Status: Terancam');
     }
 }

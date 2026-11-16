@@ -9,6 +9,8 @@
 
 @php
     $location = collect([$site->city, $site->province])->filter()->implode(', ');
+    $meter = max(0, min(100, $score / 20 * 100)); // skala tampilan 0–20+
+    $scoreUpdatedAt = $site->score_updated_at ? \Illuminate\Support\Carbon::parse($site->score_updated_at)->locale('id') : null;
 @endphp
 
 @section('content')
@@ -42,6 +44,11 @@
             <p class="mt-3 max-w-3xl text-sm leading-relaxed">{{ $site->description }}</p>
         @endif
     </div>
+
+    <span class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold {{ $status->badgeClasses() }}">
+        <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $status->color() }}"></span>
+        Status: {{ $status->label() }}
+    </span>
 </header>
 
 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -135,6 +142,59 @@
     {{-- Sidebar --}}
     <aside class="space-y-5 lg:sticky lg:top-4 lg:self-start">
 
+        {{-- PBI-14: Status & skor --}}
+        <section aria-labelledby="status-title" class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-forest/10">
+            <h2 id="status-title" class="mb-3 flex items-center gap-2 text-sm font-semibold text-forest">
+                <i data-lucide="activity" class="h-4 w-4"></i>Kondisi Situs Saat Ini
+            </h2>
+
+            <div class="flex items-center gap-3">
+                <span class="grid h-12 w-12 place-items-center rounded-full {{ $status->badgeClasses() }}">
+                    <i data-lucide="{{ $status->icon() }}" class="h-6 w-6"></i>
+                </span>
+                <div>
+                    <p class="text-lg font-bold" style="color: {{ $status->color() }}">{{ $status->label() }}</p>
+                    <p class="text-xs">{{ $status->description() }}</p>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <div class="flex items-end justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-forest">Skor Ancaman</span>
+                    <span><b class="text-2xl" data-testid="threat-score">{{ number_format($score, 1, ',', '.') }}</b></span>
+                </div>
+                <div class="relative mt-2 h-2.5 rounded-full"
+                     style="background: linear-gradient(90deg, #059669 0 25%, #f59e0b 25% 75%, #dc2626 75% 100%)"
+                     role="meter" aria-valuemin="0" aria-valuemax="20" aria-valuenow="{{ $score }}" aria-label="Skor ancaman">
+                    <span class="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow" style="left: {{ $meter }}%; background: {{ $status->color() }}"></span>
+                </div>
+                <div class="mt-1 flex justify-between text-[10px]"><span>0</span><span>5</span><span>15</span><span>20+</span></div>
+            </div>
+
+            <ul class="mt-4 space-y-1 text-xs">
+                @foreach (\App\Enums\SiteStatus::cases() as $level)
+                    <li class="flex items-center gap-2 {{ $level === $status ? 'font-semibold' : '' }}">
+                        <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $level->color() }}"></span>
+                        {{ $level->label() }} &middot; {{ $level->scoreRange() }}
+                    </li>
+                @endforeach
+            </ul>
+
+            <p class="mt-3 text-[11px] leading-relaxed">
+                Skor dihitung dari laporan terverifikasi: severity &times; bobot verifikasi &times; 0,5<sup>(umur hari / 30)</sup>.
+                @if ($scoreUpdatedAt)
+                    Diperbarui {{ $scoreUpdatedAt->diffForHumans() }}.
+                @endif
+            </p>
+
+            <dl class="mt-4 grid grid-cols-1 gap-2 text-center">
+                <div class="rounded-lg bg-mint px-2 py-2">
+                    <dt class="text-[10px] uppercase tracking-wide">Pengadopsi</dt>
+                    <dd class="text-lg font-bold text-forest" data-testid="adopters-count">{{ $adoptersCount }}</dd>
+                </div>
+            </dl>
+        </section>
+
         {{-- Aksi --}}
         <section class="space-y-2">
             @if (Route::has('reports.create'))
@@ -155,7 +215,7 @@
                 <i data-lucide="map" class="h-4 w-4"></i>Lokasi
             </h2>
             <div id="site-location-map" class="mt-3 h-48 w-full bg-mint"
-                 data-lat="{{ $site->latitude }}" data-lng="{{ $site->longitude }}" data-color="#05452b"></div>
+                 data-lat="{{ $site->latitude }}" data-lng="{{ $site->longitude }}" data-color="{{ $status->color() }}"></div>
             <p class="flex items-center justify-between gap-2 px-5 py-3 text-xs">
                 <span>{{ number_format((float) $site->latitude, 5) }}, {{ number_format((float) $site->longitude, 5) }}</span>
                 <a href="{{ url('/map') }}" class="font-semibold text-forest hover:underline">Buka di peta &rarr;</a>
