@@ -137,6 +137,26 @@
                 @endforeach
             </dl>
         </section>
+
+        {{-- PBI-15: Riwayat laporan terverifikasi --}}
+        <section id="riwayat-laporan">
+            <x-section-bar icon="history" title="Riwayat Laporan Terverifikasi">{{ $reportStats['total'] }} laporan</x-section-bar>
+
+            @if ($reports->isEmpty())
+                <div class="grid place-items-center rounded-2xl border border-dashed border-forest/20 bg-white px-6 py-10 text-center text-sm">
+                    <i data-lucide="shield-check" class="mb-2 h-8 w-8 text-forest/50"></i>
+                    <p class="font-medium">Belum ada laporan kerusakan terverifikasi.</p>
+                    <p class="text-xs">Laporan warga tampil di sini setelah lolos verifikasi moderator.</p>
+                </div>
+            @else
+                <ol class="space-y-3">
+                    @foreach ($reports as $report)
+                        @include('sites.partials.report-card', ['report' => $report, 'site' => $site])
+                    @endforeach
+                </ol>
+                <div class="mt-4">{{ $reports->links() }}</div>
+            @endif
+        </section>
     </div>
 
     {{-- Sidebar --}}
@@ -187,10 +207,18 @@
                 @endif
             </p>
 
-            <dl class="mt-4 grid grid-cols-1 gap-2 text-center">
+            <dl class="mt-4 grid grid-cols-3 gap-2 text-center">
                 <div class="rounded-lg bg-mint px-2 py-2">
                     <dt class="text-[10px] uppercase tracking-wide">Pengadopsi</dt>
                     <dd class="text-lg font-bold text-forest" data-testid="adopters-count">{{ $adoptersCount }}</dd>
+                </div>
+                <div class="rounded-lg bg-mint px-2 py-2">
+                    <dt class="text-[10px] uppercase tracking-wide">Ditangani</dt>
+                    <dd class="text-lg font-bold text-forest">{{ $reportStats['handling'] }}</dd>
+                </div>
+                <div class="rounded-lg bg-mint px-2 py-2">
+                    <dt class="text-[10px] uppercase tracking-wide">Selesai</dt>
+                    <dd class="text-lg font-bold text-forest">{{ $reportStats['resolved'] }}</dd>
                 </div>
             </dl>
         </section>
