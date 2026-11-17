@@ -1,0 +1,277 @@
+import L from './leaflet-global';
+import 'leaflet.markercluster';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import '../css/map.css';
+import { setupFilters } from './map-filters';
+import { enableTrackpadGestures } from './map-gestures';
+import { STATUS_STYLES, TYPE_LABELS, escapeHtml } from './map-shared';
+import { createSiteList } from './site-list';
+
+const INDONESIA_CENTER = [-2.5, 118];
+const INDONESIA_ZOOM = 5;
+
+function popupContent(site) {
+    const style = STATUS_STYLES[site.status] ?? STATUS_STYLES.safe;
+    const score = Number(site.threat_score ?? 0).toFixed(1);
+    const location = [site.city, site.province].filter(Boolean).map(escapeHtml).join(', ');
+
+    return `
+        <article class="site-popup">
+            <header class="site-popup__cover site-popup__cover--${escapeHtml(site.type)}">
+                <span class="site-popup__badge">${escapeHtml(site.category ?? TYPE_LABELS[site.type])}</span>
+                <span class="site-popup__status" style="--pin-color: ${style.color}">${style.label} &bull; Skor ${score}</span>
+            </header>
+            <div class="site-popup__body">
+                <h3 class="site-popup__title">${escapeHtml(site.name)}</h3>
+                <p class="site-popup__meta">${escapeHtml(TYPE_LABELS[site.type] ?? site.type)} &middot; ${location}</p>
+                <a class="site-popup__link" href="${escapeHtml(site.detail_url)}">Lihat Detail Situs &rarr;</a>
+            </div>
+        </article>
+    `;
+}
+
+function show(element, message) {
+    if (!element) {
+        return;
+    }
+    if (message) {
+        element.textContent = message;
+    }
+    element.classList.remove('hidden');
+}
+
+function hide(element) {
+    element?.classList.add('hidden');
+}
+
+function markerIcon(status) {
+    const style = STATUS_STYLES[status] ?? STATUS_STYLES.safe;
+
+    return L.divIcon({
+        className: 'site-marker',
+        html: `<span class="site-marker__pin" style="--pin-color: ${style.color}"></span>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+    });
+}
+
+// A cluster takes the colour of the most threatened site inside it,
+// so a red site never hides behind a green cluster.
+function clusterIcon(cluster) {
+    const worst = cluster
+        .getAllChildMarkers()
+        .map((marker) => STATUS_STYLES[marker.options.status] ?? STATUS_STYLES.safe)
+        .reduce((a, b) => (b.rank > a.rank ? b : a), STATUS_STYLES.safe);
+
+    const count = cluster.getChildCount();
+    const size = count < 10 ? 36 : count < 50 ? 44 : 52;
+
+    return L.divIcon({
+        className: 'site-cluster',
+        html: `<span class="site-cluster__bubble" style="--pin-color: ${worst.color}">${count}</span>`,
+        iconSize: [size, size],
+    });
+}
+
+function renderMarkers(map, sites) {
+    const layer = L.markerClusterGroup({
+        iconCreateFunction: clusterIcon,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        zoomToBoundsOnClick: true,
+        maxClusterRadius: 50,
+    });
+
+    sites.forEach((site) => {
+        L.marker([site.lat, site.lng], {
+            icon: markerIcon(site.status),
+            status: site.status,
+            site,
+            title: site.name,
+            alt: `${site.name} (${STATUS_STYLES[site.status]?.label ?? site.status})`,
+        })
+            .bindPopup(() => popupContent(site), {
+                className: 'site-popup-wrapper',
+                maxWidth: 300,
+                minWidth: 260,
+                offset: [0, -6],
+            })
+            .addTo(layer);
+    });
+
+    layer.getLayers().forEach(attachHoverPopup);
+
+    return layer.addTo(map);
+}
+
+const HOVER_CLOSE_DELAY = 250;
+const canHover = window.matchMedia('(hover: hover)').matches;
+
+// Hovering a marker previews its popup; clicking pins it open.
+// The popup stays open while the pointer moves from the marker onto the card,
+// so the "Lihat Detail Situs" button can still be clicked.
+function attachHoverPopup(marker) {
+    let closeTimer = null;
+    let pinned = false;
+
+    const cancelClose = () => clearTimeout(closeTimer);
+    const scheduleClose = () => {
+        cancelClose();
+        if (!pinned) {
+            closeTimer = setTimeout(() => marker.closePopup(), HOVER_CLOSE_DELAY);
+        }
+    };
+    const open = (pin) => {
+        cancelClose();
+        pinned = pinned || pin;
+        marker.getPopup().options.autoPan = pin;
+        if (!marker.isPopupOpen()) {
+            marker.openPopup();
+        }
+    };
+
+    // Replace Leaflet's default click toggle so a click never closes a hover preview.
+    marker.off('click', marker._openPopup, marker);
+    marker.on('click', () => open(true));
+
+    marker.on('popupopen', (event) => {
+        const element = event.popup.getElement();
+        element.addEventListener('mouseenter', cancelClose);
+        element.addEventListener('mouseleave', scheduleClose);
+    });
+    marker.on('popupclose', () => {
+        pinned = false;
+        cancelClose();
+    });
+
+    if (canHover) {
+        marker.on('mouseover', () => open(false));
+        marker.on('mouseout', scheduleClose);
+    }
+}
+
+function renderSummary(sites) {
+    const total = document.getElementById('summary-total');
+    const atRisk = document.getElementById('summary-at-risk');
+
+    if (total) {
+        total.textContent = sites.length;
+    }
+    if (atRisk) {
+        atRisk.textContent = sites.filter((site) => site.status !== 'safe').length;
+    }
+}
+
+function populateProvinceOptions(sites) {
+    const select = document.getElementById('filter-province');
+    if (!select) {
+        return;
+    }
+
+    const provinces = [...new Set(sites.map((site) => site.province).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'id'));
+
+    select.options[0].textContent = `Semua Provinsi (${provinces.length})`;
+
+    provinces.forEach((province) => select.add(new Option(province, province)));
+}
+
+async function loadSites(url) {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+
+    if (!response.ok) {
+        throw new Error(`Failed to load sites: ${response.status}`);
+    }
+
+    const payload = await response.json();
+
+    return payload.data ?? [];
+}
+
+async function initMap() {
+    const container = document.getElementById('site-map');
+    if (!container) {
+        return;
+    }
+
+    const errorBox = document.getElementById('map-error');
+    const emptyBox = document.getElementById('map-empty');
+    const loadingBox = document.getElementById('map-loading');
+
+    let map;
+
+    try {
+        map = L.map(container, {
+            zoomControl: false,
+            minZoom: 4,
+            maxZoom: 18,
+            scrollWheelZoom: false, // replaced by enableTrackpadGestures
+            zoomSnap: 0, // allow smooth pinch zoom
+            zoomDelta: 1, // +/- buttons still step one level
+        }).setView(INDONESIA_CENTER, INDONESIA_ZOOM);
+
+        enableTrackpadGestures(map);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);
+
+        const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        });
+
+        tiles.on('tileerror', () => show(errorBox));
+        tiles.addTo(map);
+
+        window.warisAlamMap = map;
+    } catch (error) {
+        console.error(error);
+        show(errorBox);
+        return;
+    }
+
+    try {
+        const sites = await loadSites(container.dataset.sitesUrl);
+
+        renderSummary(sites);
+        populateProvinceOptions(sites);
+
+        if (sites.length === 0) {
+            show(emptyBox);
+            return;
+        }
+
+        window.warisAlamSites = sites;
+        const layer = renderMarkers(map, sites);
+        window.warisAlamMarkers = layer;
+
+        const noResultsBox = document.getElementById('map-no-results');
+        const countLabel = document.getElementById('filter-count');
+        const siteList = createSiteList({ map, layer });
+
+        setupFilters({
+            form: document.getElementById('map-filters'),
+            map,
+            layer,
+            markers: layer.getLayers(),
+            resetView: () => map.setView(INDONESIA_CENTER, INDONESIA_ZOOM),
+            onChange: (visible, total) => {
+                if (countLabel) {
+                    countLabel.textContent = visible.length === total
+                        ? `Menampilkan semua ${total} situs`
+                        : `Menampilkan ${visible.length} dari ${total} situs`;
+                }
+                visible.length === 0 ? show(noResultsBox) : hide(noResultsBox);
+                siteList.update(visible);
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        show(errorBox, 'Data situs gagal dimuat. Coba muat ulang halaman.');
+    } finally {
+        hide(loadingBox);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initMap);

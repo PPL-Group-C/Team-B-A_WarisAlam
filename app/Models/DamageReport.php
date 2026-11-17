@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\ConfirmationType;
 use App\Enums\DamageCategory;
+use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +28,75 @@ class DamageReport extends Model
             'is_anonymous' => 'boolean',
             'declaration_accepted_at' => 'datetime',
             'submitted_at' => 'datetime',
+            'moderated_at' => 'datetime', // F08
+            'rejected_as_duplicate' => 'boolean', // F08
         ];
+    }
+
+    public function reporterNameFor(?User $viewer): string
+    {
+        $canSee = ! $this->is_anonymous
+            || ($viewer && Gate::forUser($viewer)->allows('view-reporter-identity', $this));
+
+        return $canSee ? $this->user->name : 'Pelapor Anonim';
+    }
+
+    // ---- F08 Moderasi (Akmal) -------------------------------------------
+    // Kolom status sengaja TIDAK di-cast ke ReportStatus karena form laporan
+    // masih menulis "draft"/"submitted". Pakai statusEnum() untuk membaca.
+
+    public function statusEnum(): ?ReportStatus
+    {
+        return ReportStatus::tryFrom((string) $this->status);
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(ReportStatusHistory::class, 'report_id')->latest('id');
+    }
+
+    public function moderator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
+    }
+
+    /** Laporan induk bila laporan ini ditandai duplikat. */
+    public function duplicateOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'duplicate_of_id');
+    }
+
+    /** Laporan lain yang ditandai sebagai duplikat dari laporan ini. */
+    public function duplicates(): HasMany
+    {
+        return $this->hasMany(self::class, 'duplicate_of_id');
+    }
+
+    public function isDuplicate(): bool
+    {
+        return $this->duplicate_of_id !== null || $this->rejected_as_duplicate;
+    }
+
+    /** Konfirmasi / bantahan warga (PBI-28/30). */
+    public function confirmations(): HasMany
+    {
+        return $this->hasMany(ReportConfirmation::class, 'report_id');
+    }
+
+    /** Tambah atribut confirm_count & dispute_count tanpa N+1. */
+    public function scopeWithConfirmationCounts(Builder $query): void
+    {
+        $query->withCount([
+            'confirmations as confirm_count' => fn (Builder $q) => $q->where('type', ConfirmationType::Confirm->value),
+            'confirmations as dispute_count' => fn (Builder $q) => $q->where('type', ConfirmationType::Dispute->value),
+        ]);
+    }
+
+    /** Kecualikan laporan duplikat, mis. untuk skor ancaman situs (FR-17). */
+    public function scopeNotDuplicate(Builder $query): void
+    {
+        $query->whereNull($query->qualifyColumn('duplicate_of_id'))
+            ->where($query->qualifyColumn('rejected_as_duplicate'), false);
     }
 
     public function user(): BelongsTo
@@ -73,13 +143,5 @@ class DamageReport extends Model
         }
 
         return 'unverified';
-    }
-
-    public function reporterNameFor(?User $viewer): string
-    {
-        $canSee = ! $this->is_anonymous
-            || ($viewer && Gate::forUser($viewer)->allows('view-reporter-identity', $this));
-
-        return $canSee ? $this->user->name : 'Pelapor Anonim';
     }
 }
