@@ -2,10 +2,14 @@
 
 namespace Tests;
 
+use Closure;
 use Facebook\WebDriver\Chrome\ChromeOptions;
+use Facebook\WebDriver\Exception\TimeoutException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
+use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
 use PHPUnit\Framework\Attributes\BeforeClass;
 
@@ -42,6 +46,30 @@ abstract class DuskTestCase extends BaseTestCase
 
             usleep(200_000);
         }
+    }
+
+    /**
+     * Run the test, then save a screenshot of the final page as test evidence:
+     * tests/Browser/screenshots/evidence/{TestClass}-{test_method}.png
+     */
+    public function browse(Closure $callback)
+    {
+        parent::browse(function (Browser $browser) use ($callback) {
+            $callback($browser);
+
+            // Let the map tiles finish loading so the screenshot is not grey or blurry.
+            try {
+                $browser->waitUntil(
+                    '!document.querySelector(".leaflet-tile-container img:not(.leaflet-tile-loaded)") && !document.querySelector(".leaflet-zoom-anim")',
+                    5,
+                )->pause(300);
+            } catch (TimeoutException) {
+                // Offline tiles should not fail the test; take the screenshot anyway.
+            }
+
+            File::ensureDirectoryExists(Browser::$storeScreenshotsAt.'/evidence');
+            $browser->screenshot('evidence/'.class_basename(static::class).'-'.$this->name());
+        });
     }
 
     /**
