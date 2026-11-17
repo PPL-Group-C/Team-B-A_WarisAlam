@@ -84,11 +84,17 @@ class UserForm
                         'Papua Barat Daya' => 'Papua Barat Daya',
                     ])
                     ->searchable()
-                    ->visible(fn ($get): bool => in_array(
-                        3,
-                        array_map('intval', (array) ($get('roles') ?? [])),
-                        true
-                    )),
+                    ->visible(function ($get): bool {
+                        $roles = (array) ($get('roles') ?? []);
+                        if (empty($roles)) {
+                            return false;
+                        }
+
+                        $instansiId = \Spatie\Permission\Models\Role::where('name', 'instansi')->value('id');
+
+                        return in_array($instansiId, array_map('intval', $roles), true)
+                            || in_array('instansi', $roles, true);
+                    }),
 
                 Toggle::make('is_active')
                     ->label('Active Account')
