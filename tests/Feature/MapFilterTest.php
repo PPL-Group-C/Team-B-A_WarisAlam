@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use Database\Seeders\MapDemoSiteSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -11,6 +13,15 @@ use Tests\TestCase;
  */
 class MapFilterTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(MapDemoSiteSeeder::class);
+    }
+
     public function test_map_page_has_all_filter_controls(): void
     {
         $this->get('/map')
