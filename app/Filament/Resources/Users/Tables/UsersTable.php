@@ -23,6 +23,16 @@ class UsersTable
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('roles.name')
+                    ->label('Role')
+                    ->badge()
+                    ->separator(','),
+
+                TextColumn::make('provinces.province')
+                    ->label('Assigned Provinces')
+                    ->badge()
+                    ->separator(','),
+
                 TextColumn::make('is_active')
                     ->label('Account Status')
                     ->badge()
