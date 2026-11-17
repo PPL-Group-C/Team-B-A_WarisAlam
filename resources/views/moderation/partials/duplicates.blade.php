@@ -31,39 +31,61 @@
 
 {{-- ===== Deteksi & penandaan duplikat (hanya laporan pending) ===== --}}
 @if ($isPending)
-    <section id="tandai-duplikat" class="scroll-mt-4 rounded-xl bg-mint p-4" aria-labelledby="dup-title">
-        <div class="flex flex-wrap items-start justify-between gap-2">
-            <div>
-                <h3 id="dup-title" class="flex items-center gap-2 font-bold"><i data-lucide="copy" class="h-5 w-5 text-forest"></i> Deteksi Duplikat</h3>
-                <p class="text-xs text-[#0f2a1d]/60">
-                    Laporan lain di situs yang sama dalam radius {{ config('moderation.duplicate_radius_m') }} m
-                    dan selisih waktu ≤ {{ config('moderation.duplicate_window_days') }} hari.
-                </p>
+    <section id="tandai-duplikat" class="scroll-mt-4 rounded-xl bg-leaf/40 p-4" aria-labelledby="dup-title"
+             x-data="{ pickOpen: @js($errors->has('duplicate_of_id')) }"
+             @open-duplicate.window="pickOpen = true; $nextTick(() => $el.scrollIntoView({ behavior: 'smooth' }))">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 flex-1 items-center gap-2">
+                <span class="grid h-7 w-6 shrink-0 place-items-center rounded-md bg-forest text-white"><i data-lucide="git-merge" class="h-4 w-4"></i></span>
+                <div class="min-w-0">
+                    <h3 id="dup-title" class="font-bold text-ink">Deteksi Duplikat (Geospasial)</h3>
+                    <p class="text-xs text-ink-soft">
+                        @if ($nearest)
+                            Laporan lain di situs yang sama berjarak {{ ReportPresenter::meters($nearest['distance']) }}, dalam radius {{ config('moderation.duplicate_radius_m') }} meter.
+                        @else
+                            Laporan lain di situs yang sama dalam radius {{ config('moderation.duplicate_radius_m') }} meter dan selisih waktu ≤ {{ config('moderation.duplicate_window_days') }} hari.
+                        @endif
+                    </p>
+                </div>
             </div>
-            <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold {{ $candidates->isNotEmpty() ? 'text-amber-700' : 'text-forest' }}" data-testid="candidate-count">
-                {{ $candidates->count() }} kandidat
-            </span>
+            <div class="flex shrink-0 flex-col items-end gap-1">
+                @if ($nearest)
+                    <span class="whitespace-nowrap rounded-full bg-white px-3 py-1 text-[11px] font-bold text-ink shadow-sm" data-testid="delta-time">
+                        Delta Waktu: Selisih {{ ReportPresenter::duration(abs($nearest['seconds'])) }}
+                    </span>
+                @endif
+                <span class="rounded-full bg-white px-3 py-1 text-[11px] font-bold shadow-sm {{ $candidates->isNotEmpty() ? 'text-sage' : 'text-forest' }}" data-testid="candidate-count">
+                    {{ $candidates->count() }} kandidat
+                </span>
+            </div>
         </div>
 
         @if ($nearest)
             @php $other = $nearest['report']; @endphp
-            <div class="mt-3 grid gap-3 sm:grid-cols-2" data-testid="duplicate-compare">
-                @foreach ([['Laporan Ini', $report], ['Pembanding', $other]] as [$title, $r])
-                    <div class="rounded-xl border border-forest/10 bg-white p-3 text-sm">
-                        <p class="flex items-start justify-between gap-2 font-semibold text-forest">
-                            <span>{{ $title }}: {{ ReportPresenter::code($r->id) }}</span>
-                            <span class="whitespace-nowrap text-[11px] font-normal text-[#0f2a1d]/60">{{ $r->submitted_at?->translatedFormat('d M, H:i') }}</span>
-                        </p>
-                        <p class="text-xs text-[#0f2a1d]/70">Pelapor: {{ $reporter($r) }}</p>
-                        <p class="mt-2 line-clamp-3 text-xs italic">"{{ $r->description ?: 'Tanpa deskripsi.' }}"</p>
-                        <p class="mt-2 text-xs font-semibold">Severity: {{ ReportPresenter::severityLabel($r->severity) }}</p>
+            <div class="mt-3 grid gap-4 rounded-lg bg-white p-2 sm:grid-cols-2" data-testid="duplicate-compare">
+                @foreach ([['Laporan Ini', $report, 'text-forest'], ['Pembanding', $other, 'text-sage']] as [$title, $r, $tone])
+                    <div class="flex flex-col gap-1 rounded bg-mint p-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="font-bold leading-6 {{ $tone }}">{{ $title }}: {{ ReportPresenter::code($r->id) }} <span class="font-semibold">({{ $r->is_anonymous ? 'Pelapor Anonim' : ($r->user?->name ?? '-') }})</span></p>
+                            <span class="whitespace-nowrap text-xs text-ink-muted">{{ $r->submitted_at?->format('H:i') }} WIB</span>
+                        </div>
+                        <p class="line-clamp-3 text-xs text-ink">"{{ $r->description ?: 'Tanpa deskripsi.' }}"</p>
+                        <p class="font-semibold leading-6 {{ $loop->first ? 'text-forest' : 'text-ink-soft' }}">Tingkat Keparahan Diajukan: Level {{ $r->severity ?? '-' }}</p>
                     </div>
                 @endforeach
             </div>
-            <dl class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs">
-                <div><dt class="inline text-[#0f2a1d]/60">Jarak:</dt> <dd class="inline font-semibold">{{ ReportPresenter::meters($nearest['distance']) }}</dd></div>
-                <div><dt class="inline text-[#0f2a1d]/60">Selisih waktu kirim:</dt> <dd class="inline font-semibold">{{ $relative($nearest['seconds']) }}</dd></div>
-            </dl>
+            @php
+                // Laporan yang lebih dulu masuk dijadikan induk.
+                $thisIsNewer = $nearest['seconds'] < 0; // seconds = waktu pembanding − waktu laporan ini
+                $parentCode = ReportPresenter::code($thisIsNewer ? $other->id : $report->id);
+                $childCode = ReportPresenter::code($thisIsNewer ? $report->id : $other->id);
+            @endphp
+            <p class="mt-3 text-xs text-ink-soft" data-testid="duplicate-recommendation">
+                Rekomendasi: Jadikan {{ $parentCode }} sebagai <strong>Laporan Induk</strong> dan tautkan {{ $childCode }} sebagai <strong>Duplikat</strong> agar kerusakan yang sama tidak dihitung dua kali.
+                @unless ($thisIsNewer)
+                    <a href="{{ route('moderation.index', ['report' => $other->id]) }}" class="font-semibold text-forest hover:underline">Buka {{ $childCode }} →</a>
+                @endunless
+            </p>
             @if ($candidates->count() > 1)
                 <p class="mt-2 text-xs">Kandidat lain:
                     @foreach ($candidates->skip(1) as $c)
@@ -73,12 +95,17 @@
                 </p>
             @endif
         @else
-            <p class="mt-3 rounded-lg bg-white px-3 py-2 text-xs text-[#0f2a1d]/70">Tidak ada kandidat duplikat otomatis. Anda tetap dapat memilih laporan induk secara manual di bawah.</p>
+            <p class="mt-3 rounded-lg bg-white px-3 py-2 text-xs text-ink-soft">Tidak ada kandidat duplikat otomatis. Anda tetap dapat memilih laporan induk secara manual.</p>
         @endif
 
-        {{-- Form tandai duplikat --}}
+        {{-- Form tandai duplikat: tersembunyi di balik tombol seperti di Figma --}}
         @if ($options->isNotEmpty())
-            <form method="POST" action="{{ route('moderation.duplicate', $report) }}" class="mt-4 rounded-xl bg-white p-3"
+            <button type="button" @click="pickOpen = !pickOpen" :aria-expanded="pickOpen.toString()"
+                    class="mt-3 inline-flex items-center gap-1 rounded-lg bg-mint-200 px-3 py-1.5 text-[13px] font-bold text-ink shadow-sm hover:bg-leaf">
+                <i data-lucide="link" class="h-3.5 w-3.5"></i> Gabungkan &amp; Konsolidasikan Klaster
+            </button>
+
+            <form x-cloak x-show="pickOpen" x-transition method="POST" action="{{ route('moderation.duplicate', $report) }}" class="mt-3 rounded-xl bg-white p-3"
                   x-data="{ q: '', parent: @js((int) old('duplicate_of_id', $nearest['report']->id ?? 0) ?: null), confirm: false }">
                 @csrf
                 <input type="hidden" name="return_query" value="{{ $returnQuery }}">
@@ -102,7 +129,7 @@
                                     <span class="flex flex-wrap items-center gap-1.5">
                                         <span class="font-semibold text-forest">{{ ReportPresenter::code($option->id) }}</span>
                                         @if ($isCandidate)
-                                            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Kandidat</span>
+                                            <span class="rounded-full bg-leaf px-2 py-0.5 text-[10px] font-semibold text-sage">Kandidat</span>
                                         @endif
                                         @if ($s = $option->statusEnum())
                                             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $s->badgeClasses() }}">{{ $s->label() }}</span>

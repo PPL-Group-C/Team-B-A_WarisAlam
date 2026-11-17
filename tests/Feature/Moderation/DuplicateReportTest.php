@@ -226,7 +226,13 @@ class DuplicateReportTest extends TestCase
         $this->assertSame([$b->id], $map[$a->id]);
         $this->assertSame([$a->id], $map[$b->id]);
         $this->assertArrayNotHasKey($lonely->id, $map);
-        $response->assertSee('Kandidat Duplikat')->assertSee('Mirip '.ReportPresenter::code($b->id));
+        // $a terpilih otomatis (paling lama): kotak "Terdeteksi Duplikat" di kartunya, "Mirip" di kartu $b.
+        $response->assertSee('Kandidat Duplikat')
+            ->assertSee('Sedang Dinilai')
+            ->assertSee('Terdeteksi Duplikat')
+            ->assertSee('Cocok dengan '.ReportPresenter::code($b->id))
+            ->assertSee('Mirip '.ReportPresenter::code($a->id))
+            ->assertSee('Siap Kurasi');
 
         $count = function (): int {
             DB::flushQueryLog();
@@ -254,6 +260,10 @@ class DuplicateReportTest extends TestCase
             ->assertOk()
             ->assertSee('Deteksi Duplikat')
             ->assertSee('1 kandidat')
+            ->assertSee('Delta Waktu: Selisih')
+            ->assertSee('Rekomendasi:')
+            ->assertSeeInOrder(['Jadikan', ReportPresenter::code($parent->id), 'Laporan Induk', ReportPresenter::code($report->id)])
+            ->assertSee('Tandai Duplikat '.ReportPresenter::code($parent->id))
             ->assertSee('Coretan pilox biru di arca Ganesha.')
             ->assertSee('data-action="duplicate"', false);
 
@@ -275,6 +285,10 @@ class DuplicateReportTest extends TestCase
         app(DuplicateReportService::class)->markAsDuplicate($this->reportAt(5), $parent, $this->moderator);
         DamageReportFactory::new()->status(ReportStatus::Rejected)->create(); // penolakan biasa tidak dihitung
 
-        $this->assertSame(1, $this->actingAs($this->moderator)->get('/moderasi')->viewData('stats')['duplicates']);
+        $response = $this->actingAs($this->moderator)->get('/moderasi');
+        $this->assertSame(1, $response->viewData('stats')['duplicates']);
+        $response->assertSee('Digabung Duplikat')
+            ->assertSee('Mesin Deteksi Duplikat Aktif (Radius 50m)')
+            ->assertSee('Lihat Seluruh Log Audit');
     }
 }

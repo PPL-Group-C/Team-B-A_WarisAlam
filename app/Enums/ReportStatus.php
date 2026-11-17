@@ -35,11 +35,12 @@ enum ReportStatus: string
     public function badgeClasses(): string
     {
         return match ($this) {
-            self::Pending => 'bg-amber-100 text-amber-800',
-            self::Verified => 'bg-emerald-100 text-emerald-800',
-            self::Rejected => 'bg-red-100 text-red-700',
-            self::Forwarded => 'bg-sky-100 text-sky-800',
-            self::InProgress => 'bg-indigo-100 text-indigo-800',
+            // Warna mengikuti palet Figma (lihat moderation/layout.blade.php).
+            self::Pending => 'bg-leaf text-leaf-ink',
+            self::Verified => 'bg-jade text-jade-ink',
+            self::Rejected => 'bg-danger-bg text-danger-ink',
+            self::Forwarded => 'bg-jade text-jade-ink',
+            self::InProgress => 'bg-mint-200 text-forest',
             self::Resolved => 'bg-forest text-white',
         };
     }

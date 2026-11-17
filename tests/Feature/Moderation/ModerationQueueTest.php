@@ -35,7 +35,7 @@ class ModerationQueueTest extends TestCase
         $this->actingAs($this->moderator)
             ->get('/moderasi')
             ->assertOk()
-            ->assertSee('Dasbor Moderasi Laporan Sains Warga (F08)')
+            ->assertSee('Dasbor Moderasi Laporan Sains Warga')
             ->assertSee('Candi Prambanan');
     }
 

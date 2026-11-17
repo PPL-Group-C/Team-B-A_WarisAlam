@@ -43,9 +43,9 @@ final class ReportPresenter
     public static function severityBadge(?int $severity): string
     {
         return match (true) {
-            $severity >= 4 => 'bg-red-100 text-red-700',
-            $severity === 3 => 'bg-amber-100 text-amber-800',
-            default => 'bg-mint-200 text-forest',
+            // Figma: level 3 ke atas merah muda, level 1–2 hijau keabuan.
+            $severity >= 3 => 'bg-danger-bg text-danger-ink',
+            default => 'bg-mint-200 text-ink',
         };
     }
 

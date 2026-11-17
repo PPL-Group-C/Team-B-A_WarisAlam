@@ -25,6 +25,7 @@ class ModerationController extends Controller
     public const SORTS = [
         'oldest' => 'Terlama dulu (FIFO)',
         'severity' => 'Severity tertinggi',
+        'confirmations' => 'Konfirmasi warga terbanyak',
     ];
 
     public function index(Request $request, ReportStatusService $statuses, DuplicateReportService $duplicates): View
@@ -74,6 +75,7 @@ class ModerationController extends Controller
                 'user:id,name',
                 'photos:id,damage_report_id,path,original_name',
             ])
+            ->withConfirmationCounts()
             ->when($filters['status'] !== 'all', fn (Builder $q) => $q->where('status', $filters['status']))
             ->when($filters['category'] ?? null, fn (Builder $q, $category) => $q->where('category', $category))
             ->when($filters['severity'] ?? null, fn (Builder $q, $severity) => $q->where('severity', $severity))
@@ -90,6 +92,7 @@ class ModerationController extends Controller
                 });
             })
             ->when($filters['sort'] === 'severity', fn (Builder $q) => $q->orderByDesc('severity'))
+            ->when($filters['sort'] === 'confirmations', fn (Builder $q) => $q->orderByDesc('confirm_count')->orderBy('dispute_count'))
             ->orderBy('submitted_at')
             ->orderBy('id');
     }
@@ -111,6 +114,7 @@ class ModerationController extends Controller
                 'duplicates:id,user_id,duplicate_of_id,status,submitted_at,is_anonymous',
                 'duplicates.user:id,name',
             ])
+            ->withConfirmationCounts()
             ->find($id);
     }
 

@@ -27,48 +27,70 @@
         </h3>
 
         <fieldset @disabled(! $canApprove) class="disabled:opacity-60">
-            <legend class="mb-2 text-sm font-semibold">Verifikasi Tingkat Keparahan (Severity):</legend>
-            <div class="grid grid-cols-5 gap-1 rounded-xl bg-mint p-1">
-                @foreach (range(1, 5) as $level)
-                    <label class="cursor-pointer">
-                        <input type="radio" name="severity" value="{{ $level }}" x-model.number="severity" class="peer sr-only"
-                               @checked((int) old('severity', $report->severity) === $level)>
-                        <span class="block rounded-lg px-1 py-2 text-center text-xs transition peer-checked:bg-forest peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-forest
-                                     {{ $level >= 4 ? 'text-red-700' : '' }}">
-                            <span class="block font-bold">L{{ $level }}</span>
-                            <span class="block text-[10px]">{{ ReportPresenter::severityShort($level) }}</span>
-                        </span>
-                    </label>
-                @endforeach
-            </div>
-            <p class="mt-1 text-xs text-[#0f2a1d]/60" x-text="titles[severity] ?? ''">{{ $titles[$report->severity] ?? '' }}</p>
-            @if ($report->severity_original !== null && $report->severity_original !== $report->severity)
-                <p class="mt-1 text-xs text-amber-700">Severity awal dari pelapor: Level {{ $report->severity_original }}</p>
-            @endif
-            @error('severity') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
+            <legend class="sr-only">Verifikasi Tingkat Keparahan</legend>
+            <div class="grid gap-4 sm:grid-cols-2">
+                {{-- Kiri: pill severity (Figma "Severity Adjustment Pills") --}}
+                <div>
+                    <p class="mb-1.5 text-[13px] font-bold text-ink">Verifikasi Tingkat Keparahan (Severity Index):</p>
+                    <div class="inline-flex gap-1 rounded-lg bg-mint p-1">
+                        @foreach (range(1, 5) as $level)
+                            <label class="cursor-pointer">
+                                <input type="radio" name="severity" value="{{ $level }}" x-model.number="severity" class="peer sr-only"
+                                       @checked((int) old('severity', $report->severity) === $level)>
+                                <span class="block min-w-[3.25rem] rounded px-2.5 pb-2 pt-1.5 text-center font-semibold transition peer-checked:bg-forest peer-checked:font-bold peer-checked:text-white peer-checked:shadow peer-focus-visible:ring-2 peer-focus-visible:ring-forest
+                                             {{ $level === 5 ? 'font-bold text-danger' : 'text-ink-soft' }}">
+                                    <span class="block text-[11px] leading-[14px]">L{{ $level }}</span>
+                                    <span class="block text-[10px] leading-[14px]">{{ ReportPresenter::severityShort($level) }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <p class="mt-1.5 text-xs text-ink-muted" x-text="titles[severity] ?? ''">{{ $titles[$report->severity] ?? '' }}</p>
+                    @error('severity') <p class="mt-1 text-xs text-danger">{{ $message }}</p> @enderror
+                </div>
 
-            <label for="moderator_note" class="mb-1 mt-4 block text-sm font-semibold">Catatan Kurasi untuk Tim Instansi <span class="font-normal text-[#0f2a1d]/50">(opsional)</span></label>
-            <textarea id="moderator_note" name="moderator_note" rows="3" maxlength="2000"
+                {{-- Kanan: di Figma berisi "Unit Balai Tujuan" (F09); di F08 diisi severity asli pelapor. --}}
+                <div>
+                    <p class="mb-1.5 text-[13px] font-bold text-ink">Severity Diajukan Pelapor:</p>
+                    @php $submitted = $report->severity_original ?? $report->severity; @endphp
+                    <div class="rounded-lg bg-mint px-4 py-2.5 text-xs text-ink" data-testid="submitted-severity">
+                        {{ ReportPresenter::severityLabel($submitted) }}
+                    </div>
+                    <p class="mt-1.5 text-xs text-ink-muted">
+                        @if ($report->severity_original !== null && $report->severity_original !== $report->severity)
+                            Sudah disesuaikan moderator menjadi Level {{ $report->severity }}.
+                        @else
+                            Nilai asli disimpan bila moderator mengubah level.
+                        @endif
+                    </p>
+                </div>
+            </div>
+
+            <label for="moderator_note" class="mb-1.5 mt-4 block text-[13px] font-bold text-ink">Catatan Kurasi untuk Tim Pemugaran BPK: <span class="font-normal text-ink-muted">(opsional)</span></label>
+            <textarea id="moderator_note" name="moderator_note" rows="4" maxlength="2000"
                       placeholder="Mis: coretan cat semprot terverifikasi pada arca; rekomendasi pelarut non-destruktif."
-                      class="w-full rounded-xl border border-forest/15 bg-mint/50 p-3 text-sm outline-none focus:ring-2 focus:ring-forest">{{ old('moderator_note') }}</textarea>
+                      class="w-full rounded-xl border-0 bg-mint p-3 text-xs leading-relaxed text-ink shadow-sm outline-none focus:ring-2 focus:ring-forest">{{ old('moderator_note') }}</textarea>
             @error('moderator_note') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
         </fieldset>
 
-        <div class="mt-4 flex flex-col-reverse gap-2 rounded-xl bg-mint p-3 sm:flex-row sm:justify-end">
+        {{-- Konsol keputusan (Figma: "Decision Action Console") --}}
+        <div class="mt-4 flex flex-col gap-2 rounded-xl bg-mint p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <button type="button" @click="rejectOpen = true" @disabled(! $canReject) data-action="reject"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
+                    class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-mint-100 px-4 py-2.5 text-[13px] font-bold text-danger hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50">
                 <i data-lucide="ban" class="h-4 w-4"></i> Tolak Laporan
             </button>
-            @if ($canReject)
-                <a href="#tandai-duplikat"
-                   class="inline-flex items-center justify-center gap-2 rounded-lg border border-forest/20 bg-white px-4 py-2.5 text-sm font-semibold text-forest hover:bg-mint-200">
-                    <i data-lucide="copy" class="h-4 w-4"></i> Tandai Duplikat
-                </a>
-            @endif
-            <button type="button" @click="confirmApprove = true" @disabled(! $canApprove) data-action="approve"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-forest px-5 py-2.5 text-sm font-semibold text-white hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-50">
-                <i data-lucide="check-circle-2" class="h-4 w-4"></i> Setujui Laporan
-            </button>
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-center">
+                @if ($canReject)
+                    <a href="#tandai-duplikat" @click.prevent="$dispatch('open-duplicate')"
+                       class="inline-flex items-center justify-center gap-2 rounded-lg bg-leaf px-4 py-2.5 text-[13px] font-bold text-sage hover:bg-leaf/70">
+                        <i data-lucide="copy" class="h-4 w-4"></i> Tandai Duplikat{{ $candidates->isNotEmpty() ? ' '.ReportPresenter::code($candidates->first()['report']->id) : '' }}
+                    </a>
+                @endif
+                <button type="button" @click="confirmApprove = true" @disabled(! $canApprove) data-action="approve"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-forest px-5 py-2.5 text-[13px] font-bold text-white shadow-md hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-50">
+                    <i data-lucide="send" class="h-4 w-4"></i> Setujui Laporan
+                </button>
+            </div>
         </div>
         @unless ($canApprove || $canReject)
             <p class="mt-2 text-xs text-[#0f2a1d]/60">Setujui/Tolak hanya tersedia untuk laporan berstatus "Menunggu Kurasi".</p>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ConfirmationType;
 use App\Enums\DamageCategory;
 use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Builder;
@@ -68,6 +69,21 @@ class DamageReport extends Model
     public function isDuplicate(): bool
     {
         return $this->duplicate_of_id !== null || $this->rejected_as_duplicate;
+    }
+
+    /** Konfirmasi / bantahan warga (PBI-28/30). */
+    public function confirmations(): HasMany
+    {
+        return $this->hasMany(ReportConfirmation::class, 'report_id');
+    }
+
+    /** Tambah atribut confirm_count & dispute_count tanpa N+1. */
+    public function scopeWithConfirmationCounts(Builder $query): void
+    {
+        $query->withCount([
+            'confirmations as confirm_count' => fn (Builder $q) => $q->where('type', ConfirmationType::Confirm->value),
+            'confirmations as dispute_count' => fn (Builder $q) => $q->where('type', ConfirmationType::Dispute->value),
+        ]);
     }
 
     /** Kecualikan laporan duplikat, mis. untuk skor ancaman situs (FR-17). */
