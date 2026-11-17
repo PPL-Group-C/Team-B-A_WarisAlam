@@ -1,19 +1,33 @@
 <?php
 
-namespace Tests\Browser\Moderation;
+namespace Tests\Browser;
 
 use App\Enums\DamageCategory;
 use App\Enums\ReportStatus;
 use App\Models\User;
 use Laravel\Dusk\Browser;
+use Tests\Browser\Concerns\ModerationTestData;
 use Tests\Browser\Pages\ModerationPage;
+use Tests\DuskTestCase;
 
 /**
  * PBI #22 (SCRUM-15): antrean laporan pending untuk moderator.
- * Test case: TC.Moderasi.001 – TC.Moderasi.007.
+ * Test case di sheet: TC.Moderasi.001 – TC.Moderasi.007.
+ *
+ * Strategi pengujian (E2E, black-box):
+ * - Partisi peran pengguna: moderator (boleh masuk) | warga biasa (403) | tamu belum login (403).
+ * - Partisi status laporan: "Menunggu Kurasi" tampil di antrean | status lain (Terverifikasi) tidak tampil.
+ * - Partisi filter: kata kunci nama situs | kategori + level severity | Reset kembali ke semua laporan.
+ * - Urutan: FIFO (default) | severity tertinggi; kondisi batas: dua laporan level 5 → yang lebih lama di atas.
+ * - Partisi pelapor: biasa | anonim (nama tetap terlihat oleh moderator dengan badge "Anonim").
+ * - Galeri foto: lightbox terbuka saat foto diklik dan tertutup saat "Tutup" diklik.
+ *
+ * Jalankan: php artisan dusk --filter=PBI22_ModerationQueueTest
  */
-class PBI22_ModerationQueueTest extends ModerationBrowserTestCase
+class PBI22_ModerationQueueTest extends DuskTestCase
 {
+    use ModerationTestData;
+
     /** TC.Moderasi.001 */
     public function test_moderator_sees_pending_queue(): void
     {

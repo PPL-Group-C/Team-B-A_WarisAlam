@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Browser\Moderation;
+namespace Tests\Browser\Concerns;
 
 use App\Enums\ConfirmationType;
 use App\Enums\DamageCategory;
@@ -13,22 +13,21 @@ use Database\Factories\HeritageSiteFactory;
 use Database\Factories\ReportConfirmationFactory;
 use Database\Factories\ReportPhotoFactory;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Tests\DuskTestCase;
 
 /**
- * F08 Moderasi Laporan: dasar untuk semua test Dusk moderasi.
+ * F08 Moderasi Laporan: data uji untuk test Dusk moderasi.
  *
- * Test ini MENULIS ke database (setujui, tolak, tandai duplikat), jadi
- * wajib dijalankan dengan .env.dusk.local yang menunjuk ke database
- * khusus Dusk (mis. warisalam_dusk). Setiap test mengosongkan tabel
- * database itu terlebih dulu. Server (php artisan serve) harus berjalan
- * di APP_URL, dan email moderator harus ada di MODERATOR_EMAILS.
+ * Memakai DatabaseTruncation. Test moderasi MENULIS ke
+ * database (setujui, tolak, tandai duplikat), jadi wajib dijalankan dengan
+ * .env.dusk.local yang menunjuk ke database khusus Dusk (warisalam_dusk).
+ * Tabel database itu dikosongkan sebelum setiap test. Server
+ * (php artisan serve) harus berjalan di APP_URL, dan email moderator harus
+ * terdaftar di MODERATOR_EMAILS.
  */
-abstract class ModerationBrowserTestCase extends DuskTestCase
+trait ModerationTestData
 {
     use DatabaseTruncation;
 
@@ -36,10 +35,9 @@ abstract class ModerationBrowserTestCase extends DuskTestCase
 
     protected User $moderator;
 
-    protected function setUp(): void
+    /** Dipanggil otomatis oleh Laravel sebelum setiap test. */
+    protected function setUpModerationTestData(): void
     {
-        parent::setUp();
-
         $email = config('moderation.moderator_emails')[0] ?? null;
 
         if (! $email) {
@@ -49,11 +47,10 @@ abstract class ModerationBrowserTestCase extends DuskTestCase
         $this->moderator = User::factory()->create(['name' => 'Rina Moderator', 'email' => $email]);
     }
 
-    protected function tearDown(): void
+    /** Dipanggil otomatis oleh Laravel setelah setiap test. */
+    protected function tearDownModerationTestData(): void
     {
         Storage::disk('public')->deleteDirectory(self::PHOTO_DIR);
-
-        parent::tearDown();
     }
 
     /** Pengaman: jangan pernah mengosongkan database kerja (mis. warisalam). */

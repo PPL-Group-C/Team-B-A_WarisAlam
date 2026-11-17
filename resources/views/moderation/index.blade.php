@@ -14,7 +14,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <nav class="flex flex-wrap items-center gap-2 text-sm">
                 <span class="inline-flex items-center gap-1 rounded-full bg-jade/60 px-3 py-1 font-bold text-forest">
-                    <i data-lucide="shield-check" class="h-4 w-4"></i> Modul Kurasi F08
+                    <i data-lucide="shield-check" class="h-4 w-4"></i> Modul Kurasi
                 </span>
                 <i data-lucide="chevron-right" class="h-4 w-4 text-forest/50"></i>
                 <span>Antrean Validasi Sains Warga</span>
@@ -35,7 +35,7 @@
 
         <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div class="min-w-0">
-                <h1 class="text-2xl font-bold leading-tight text-forest lg:whitespace-nowrap lg:text-[32px] lg:leading-10">Dasbor Moderasi Laporan Sains Warga (F08)</h1>
+                <h1 class="text-2xl font-bold leading-tight text-forest lg:whitespace-nowrap lg:text-[32px] lg:leading-10">Dasbor Moderasi Laporan Sains Warga</h1>
                 <p class="mt-1 max-w-[672px] text-sm text-ink-soft">
                     Kurasi bukti lapangan, verifikasi tingkat keparahan, dan eliminasi anomali duplikasi sebelum eskalasi
                     ke Balai Pelestarian Kebudayaan (BPK) &amp; BKSDA.

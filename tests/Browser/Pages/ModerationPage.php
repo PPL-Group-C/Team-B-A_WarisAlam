@@ -20,7 +20,7 @@ class ModerationPage extends Page
     public function assert(Browser $browser): void
     {
         $browser->assertPathIs('/moderasi')
-            ->assertSee('Dasbor Moderasi Laporan Sains Warga (F08)');
+            ->assertSee('Dasbor Moderasi Laporan Sains Warga');
     }
 
     /**

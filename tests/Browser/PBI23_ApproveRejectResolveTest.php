@@ -1,17 +1,30 @@
 <?php
 
-namespace Tests\Browser\Moderation;
+namespace Tests\Browser;
 
 use App\Enums\ReportStatus;
 use Laravel\Dusk\Browser;
+use Tests\Browser\Concerns\ModerationTestData;
 use Tests\Browser\Pages\ModerationPage;
+use Tests\DuskTestCase;
 
 /**
  * PBI #23 (SCRUM-16): setujui / tolak laporan dan konfirmasi penyelesaian.
- * Test case: TC.Moderasi.008 – TC.Moderasi.014.
+ * Test case di sheet: TC.Moderasi.008 – TC.Moderasi.014.
+ *
+ * Strategi pengujian (E2E, black-box):
+ * - Partisi aksi: setujui | tolak | konfirmasi selesai | batal (status tidak berubah).
+ * - Kondisi batas alasan tolak: "buram" (5 karakter, < 10 → tombol nonaktif) | alasan ≥ 10 karakter (terkirim).
+ * - Partisi status: Menunggu Kurasi (Setujui/Tolak aktif) | Terverifikasi (nonaktif) | Dalam Penanganan (Konfirmasi Selesai).
+ * - Severity: diubah moderator (Level 3 → 4) → nilai asli pelapor tetap tersimpan dan ditampilkan.
+ * - Log kurasi: keputusan terbaru tampil di baris paling atas.
+ *
+ * Jalankan: php artisan dusk --filter=PBI23_ApproveRejectResolveTest
  */
-class PBI23_ApproveRejectResolveTest extends ModerationBrowserTestCase
+class PBI23_ApproveRejectResolveTest extends DuskTestCase
 {
+    use ModerationTestData;
+
     /** TC.Moderasi.008 */
     public function test_moderator_approves_report_with_adjusted_severity(): void
     {

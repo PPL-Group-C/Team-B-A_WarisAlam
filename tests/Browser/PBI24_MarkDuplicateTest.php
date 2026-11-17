@@ -1,18 +1,30 @@
 <?php
 
-namespace Tests\Browser\Moderation;
+namespace Tests\Browser;
 
 use App\Enums\ReportStatus;
 use Laravel\Dusk\Browser;
+use Tests\Browser\Concerns\ModerationTestData;
 use Tests\Browser\Pages\ModerationPage;
+use Tests\DuskTestCase;
 
 /**
  * PBI #24 (SCRUM-17): menandai laporan duplikat.
- * Kandidat otomatis = situs sama, radius ≤ 50 m, selisih waktu ≤ 7 hari.
- * Test case: TC.Moderasi.015 – TC.Moderasi.020.
+ * Test case di sheet: TC.Moderasi.015 – TC.Moderasi.020.
+ *
+ * Strategi pengujian (E2E, black-box):
+ * - Partisi kandidat otomatis: ada (situs sama, jarak ≤ 50 m, selisih ≤ 7 hari) | tidak ada (situs berbeda).
+ * - Kondisi batas waktu: laporan > 7 hari bukan kandidat otomatis, tetapi tetap bisa dipilih manual sebagai induk.
+ * - Partisi status: laporan pending bisa ditandai duplikat | laporan yang sudah duplikat tidak bisa ditandai lagi.
+ * - Relasi induk–anak: laporan induk menampilkan daftar duplikat yang ditautkan.
+ * - Pencarian induk manual: berdasarkan ID laporan | kata di deskripsi.
+ *
+ * Jalankan: php artisan dusk --filter=PBI24_MarkDuplicateTest
  */
-class PBI24_MarkDuplicateTest extends ModerationBrowserTestCase
+class PBI24_MarkDuplicateTest extends DuskTestCase
 {
+    use ModerationTestData;
+
     /** TC.Moderasi.015 */
     public function test_candidate_duplicate_is_detected(): void
     {

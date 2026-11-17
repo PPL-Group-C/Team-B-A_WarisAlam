@@ -1,16 +1,27 @@
 <?php
 
-namespace Tests\Browser\Moderation;
+namespace Tests\Browser;
 
 use Laravel\Dusk\Browser;
+use Tests\Browser\Concerns\ModerationTestData;
 use Tests\Browser\Pages\ModerationPage;
+use Tests\DuskTestCase;
 
 /**
  * PBI #30 (SCRUM-18): jumlah konfirmasi & bantahan warga pada laporan.
- * Test case: TC.Moderasi.021 – TC.Moderasi.023.
+ * Test case di sheet: TC.Moderasi.021 – TC.Moderasi.023.
+ *
+ * Strategi pengujian (E2E, black-box):
+ * - Partisi suara warga: hanya konfirmasi | bantahan > konfirmasi (muncul peringatan) | tanpa suara (0/0, tanpa badge).
+ * - Kondisi batas: laporan tanpa suara sama sekali tidak menampilkan badge konfirmasi.
+ * - Urutan "Konfirmasi warga terbanyak": konfirmasi terbanyak di atas, laporan tanpa suara paling bawah.
+ *
+ * Jalankan: php artisan dusk --filter=PBI30_ConfirmationCountTest
  */
-class PBI30_ConfirmationCountTest extends ModerationBrowserTestCase
+class PBI30_ConfirmationCountTest extends DuskTestCase
 {
+    use ModerationTestData;
+
     /** TC.Moderasi.021 */
     public function test_confirmation_counts_are_displayed(): void
     {
