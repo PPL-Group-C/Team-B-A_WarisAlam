@@ -2,8 +2,138 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../../vendor/filament/**/*.blade.php';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* WarisAlam color palette */
+:root {
+    --wa-dark: #174d35;
+    --wa-green: #24764d;
+    --wa-light: #eaf4ec;
+    --wa-pale: #f5f8f4;
+    --wa-border: #dce8dd;
+    --wa-text: #263b30;
+}
+
+/* Main background */
+.fi-body {
+    background: var(--wa-pale);
+    color: var(--wa-text);
+}
+
+/* Sidebar */
+.fi-sidebar {
+    background: #174d35 !important;
+    border-right: none !important;
+}
+
+.fi-sidebar-header {
+    background: #174d35 !important;
+}
+
+.fi-sidebar .fi-logo,
+.fi-sidebar .fi-logo span {
+    color: #ffffff !important;
+}
+
+.fi-sidebar .fi-nav-item-label,
+.fi-sidebar .fi-nav-group-label,
+.fi-sidebar .fi-icon {
+    color: #dcefe1 !important;
+}
+
+.fi-sidebar .fi-nav-item-button:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.fi-sidebar .fi-nav-item-active .fi-nav-item-button {
+    background: #e4f1e6 !important;
+}
+
+.fi-sidebar .fi-nav-item-active .fi-nav-item-label,
+.fi-sidebar .fi-nav-item-active .fi-icon {
+    color: #174d35 !important;
+}
+
+/* Header */
+.fi-topbar {
+    background: #ffffff !important;
+    border-bottom: 1px solid var(--wa-border);
+}
+
+/* Page heading */
+.fi-header-heading {
+    color: var(--wa-dark) !important;
+    font-weight: 700 !important;
+}
+
+.fi-header-subheading {
+    color: #718176 !important;
+}
+
+/* Main content cards */
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat {
+    background: #ffffff !important;
+    border: 1px solid var(--wa-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 3px 12px rgba(23, 77, 53, 0.04) !important;
+}
+
+/* Table heading */
+.fi-ta-header-cell {
+    background: #f0f6f0 !important;
+    color: var(--wa-dark) !important;
+    font-weight: 700 !important;
+}
+
+/* Table rows */
+.fi-ta-row {
+    transition: background 0.2s ease;
+}
+
+.fi-ta-row:hover {
+    background: #f5faf5 !important;
+}
+
+/* Table content */
+.fi-ta-cell {
+    color: var(--wa-text);
+}
+
+/* Search and filters */
+.fi-input-wrp,
+.fi-select-input,
+.fi-fo-field-wrp {
+    border-radius: 10px !important;
+}
+
+/* Buttons */
+.fi-btn-color-primary {
+    background: var(--wa-dark) !important;
+}
+
+.fi-btn-color-primary:hover {
+    background: var(--wa-green) !important;
+}
+
+/* Badges */
+.fi-badge {
+    border-radius: 999px !important;
+    font-weight: 600 !important;
+}
+
+/* Pagination */
+.fi-pagination {
+    padding: 12px 16px;
+}
+
+/* Responsive spacing */
+.fi-main {
+    background: var(--wa-pale);
 }
