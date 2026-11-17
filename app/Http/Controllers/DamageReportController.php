@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\DamageCategory;
 use App\Http\Requests\StoreDamageReportRequest;
+use App\Http\Resources\DamageReportResource;
 use App\Models\DamageReport;
 use App\Models\HeritageSite;
 use App\Support\ExifReader;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DamageReportController extends Controller
@@ -45,6 +47,41 @@ class DamageReportController extends Controller
         ]);
     }
 
+    /** Community feed: every submitted report, newest first. */
+    public function index()
+    {
+        $reports = DamageReport::withVerificationCounts()
+            ->with('site', 'user')
+            ->where('status', '!=', 'draft')
+            ->latest('submitted_at')
+            ->paginate(12);
+
+        return view('reports.index', compact('reports'));
+    }
+
+    /** One report with its verification panel (HTML), or JSON when the client asks for it. */
+    public function show(Request $request, DamageReport $report)
+    {
+        // Drafts stay private to their owner.
+        abort_unless($report->status !== 'draft' || $request->user()?->id === $report->user_id, 404);
+
+        $report = DamageReport::withVerificationCounts()
+            ->with('site', 'photos', 'user')
+            ->findOrFail($report->id);
+
+        if ($request->wantsJson()) {
+            return new DamageReportResource($report);
+        }
+
+        return view('reports.show', [
+            'report' => $report,
+            'myVote' => $request->user()
+                ? $report->verifications()->where('user_id', $request->user()->id)->first()
+                : null,
+            'comments' => $report->verifications()->whereNotNull('comment')->latest()->limit(10)->get(),
+        ]);
+    }
+
     public function store(StoreDamageReportRequest $request)
     {
         $isDraft = $request->isDraft();
@@ -53,7 +90,7 @@ class DamageReportController extends Controller
             $report = DamageReport::create([
                 ...$request->safe()->only([
                     'heritage_site_id', 'latitude', 'longitude', 'gps_accuracy_m',
-                    'category', 'severity', 'description',
+                    'location_source', 'category', 'severity', 'description',
                 ]),
                 'user_id' => $request->user()->id,
                 'is_anonymous' => $request->boolean('is_anonymous'),
