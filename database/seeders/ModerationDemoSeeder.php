@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ConfirmationType;
 use App\Enums\DamageCategory;
 use App\Enums\ReportStatus;
 use App\Models\DamageReport;
@@ -74,6 +75,25 @@ class ModerationDemoSeeder extends Seeder
 
             $this->attachPhotos($report, $i, $i % 3 === 0 ? 1 : 2, $at, withExif: $i % 4 !== 3);
             $reports[] = $report;
+        }
+
+        // Konfirmasi / bantahan warga (PBI-30): [indeks laporan => [indeks warga => tipe]].
+        // Pelapor sendiri tidak ikut memberi suara.
+        $votes = [
+            0 => [1 => 'confirm', 2 => 'confirm', 3 => 'confirm', 4 => 'confirm'],
+            2 => [0 => 'confirm', 1 => 'confirm', 4 => 'dispute'],
+            4 => [0 => 'confirm', 1 => 'confirm'],
+            5 => [0 => 'dispute', 1 => 'dispute', 2 => 'confirm'],
+            6 => [1 => 'confirm'],
+            8 => [0 => 'dispute'],
+        ];
+        foreach ($votes as $reportIdx => $byUser) {
+            foreach ($byUser as $userIdx => $type) {
+                $reports[$reportIdx]->confirmations()->create([
+                    'user_id' => $warga[$userIdx]->id,
+                    'type' => ConfirmationType::from($type),
+                ]);
+            }
         }
 
         // Beberapa laporan yang sudah diproses agar statistik & rekam jejak pelapor terisi.
