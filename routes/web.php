@@ -13,8 +13,4 @@ if (app()->environment('local')) {
 
         return redirect()->route('reports.create');
     });
-}
-Route::middleware('auth')->group(function () {
-    Route::get('/laporan/baru', [DamageReportController::class, 'create'])->name('reports.create');
-    Route::post('/laporan', [DamageReportController::class, 'store'])->name('reports.store');
-});
+};

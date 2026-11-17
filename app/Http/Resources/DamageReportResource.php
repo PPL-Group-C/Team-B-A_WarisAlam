@@ -1,10 +1,9 @@
 <?php
-// PBI #18 Anonymous Reporting
+
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class DamageReportResource extends JsonResource
 {
@@ -19,8 +18,13 @@ class DamageReportResource extends JsonResource
             'status' => $this->status,
             'is_anonymous' => $this->is_anonymous,
             'reporter' => $this->reporterNameFor($request->user()), // never user_id or email
+            'verification' => [
+                'confirms' => (int) $this->confirms_count,
+                'disputes' => (int) $this->disputes_count,
+                'status' => $this->verificationStatus(),
+            ],
             'photos' => $this->photos->map(fn ($p) => [
-                'url' => Storage::url($p->path),
+                'url' => asset('storage/'.$p->path),
                 'exif_valid' => $p->exif_valid,
             ]),
         ];
